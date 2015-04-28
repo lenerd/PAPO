@@ -1,0 +1,98 @@
+# 1.
+$ sudo pacman -S openssh
+
+# 2.
+# ~/.ssh/config
+#
+# Host wr-cluster
+#     User braun
+#     Hostname cluster.wr.informatik.uni-hamburg.de
+#     Compression yes
+#     ForwardX11 yes
+
+$ ssh wr-cluster
+
+# 3.
+# a)
+$ man man
+
+# b)
+$ man pwd
+$ pwd
+/home/braun
+
+# c)
+$ man ls
+$ ls
+aufgaben   examples       gmon.out  m1-12-2  rxvt-unicode-256color.terminfo
+circle_vt  foo.sh         hlr       m1-12-3  scripts
+ddt.out    function.data  m1-12-1   pde      timempi2
+
+# d)
+$ man mkdir
+$ mkdir testdir
+
+# e)
+$ cd testdir/
+
+# f)
+$ ls
+
+# g)
+$ man touch
+$ touch testfile
+
+# h)
+$ man mv
+$ mv testfile testdir2
+
+# i)
+$ man cp
+$ cp testfile2 testfile3
+
+# j)
+$ man rm
+$ rm testfile2
+
+# Frage:
+# Die Manpage zu cd trägt einen anderen Titel, da es sich bei cd um ein
+# eingebautes Kommando der Shell handel.
+
+# 4.
+# a)
+$ mkdir testarchiv
+
+# b)
+$ dd if=/dev/urandom of=testarchiv/zufallsdatei bs=1k count=256
+256+0 records in
+256+0 records out
+262144 bytes (262 kB) copied, 0.0324979 s, 8.1 MB/s
+
+# c)
+$ ls -lh testarchiv/zufallsdatei
+-rw-r--r-- 1 braun hr-1415 256K Apr  9 22:31 testarchiv/zufallsdatei
+
+# d)
+$ ls -ldh testarchiv
+drwxr-xr-x 2 braun hr-1415 3 Apr  9 22:31 testarchiv/
+
+# e)
+$ tar -cf testarchiv.tar testarchiv
+
+# f)
+$ ls -lh testarchiv.tar
+# Das Archiv ist größer als die Datei und der Ordner zusammen.
+
+# g)
+$ gzip testarchiv.tar
+
+# h)
+$ ls -lh testarchiv.tar.gz
+-rw-r--r-- 1 braun hr-1415 257K Apr  9 22:33 testarchiv.tar.gz
+# Frage:
+# tar -czf testarchiv.tar.gz testarchiv
+
+# i)
+$ tar tf testarchiv.tar.gz
+testarchiv/
+testarchiv/zufallsdatei

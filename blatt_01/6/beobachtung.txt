@@ -1,0 +1,5 @@
+Die Prozesse werden nicht immer auf dem gleiche Node ausgeführt. Bspw. geben
+einige Prozesse „west7“ und andere „west9“ als Hostname aus.
+
+Slurm verteilt die Jobs nach dem gewählten Algorithmus auf die verfügbaren
+Knoten bzw. stellt die Jobs in eine Warteschlange bis Knoten frei werden.
