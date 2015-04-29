@@ -1,0 +1,3 @@
+Ja, dies ist Aufgabe 4. Habe unabhängig von der nächsten Aufgabe (bevor ich sie
+gelesen hatte) eine ähnliche Aufgabenstellung gewählt.
+Das mit dem Pseudocode hätte auch grö0er da stehen können ...

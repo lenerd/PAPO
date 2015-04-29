@@ -5,6 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+/**
+ * Struct representing a matrix.
+ */
 typedef struct
 {
     uint64_t rows;
@@ -13,12 +16,18 @@ typedef struct
     int64_t** m;
 } matrix_t;
 
+/**
+ * Struct representing a vector.
+ */
 typedef struct
 {
     uint64_t len;
     int64_t* data;
 } vector_t;
 
+/**
+ * Struct representing a range.
+ */
 typedef struct 
 {
     uint64_t start; /* inclusive */
@@ -26,6 +35,9 @@ typedef struct
     uint64_t len;
 } partition_t;
 
+/**
+ * Struct with process information.
+ */
 typedef struct 
 {
     uint64_t P;     /* number of processes */
@@ -33,25 +45,81 @@ typedef struct
 } proc_info_t;
 
 
+/**
+ * Creates proc_info_t struct.
+ */
 void create_proc_info (proc_info_t* pinfo, uint64_t p, uint64_t r);
+
+/**
+ * create partition_t struct.
+ */
 void create_partition (partition_t* part, uint64_t n, uint64_t p, uint64_t r);
 
+/**
+ * Calculates matrix vector product A*x.
+ */
 vector_t* Ax (matrix_t* A, vector_t* x);
+
+/**
+ * Calculates matrix product A*B.
+ */
 matrix_t* AB (matrix_t* A, matrix_t* B, proc_info_t* pinfo);
 
+/** 
+ * Creates an empty vector with length len.
+ */
 vector_t* create_vector (uint64_t len);
+
+/**
+ * Reads a vector from file.
+ */
 vector_t* read_vector (char* path);
+
+/**
+ * Writes a vector to file.
+ */
 void write_vector (char* path, vector_t* x);
+
+/**
+ * Destroys a vector.
+ */
 void destroy_vector (vector_t* x);
+
+/**
+ * Prints a vector.
+ */
 void print_vector (vector_t* x);
 
+/**
+ * Creates empty matrix wit given dimensions.
+ */
 matrix_t* create_matrix (uint64_t rows, uint64_t cols);
+
+/**
+ * Reads matrix from file.
+ */
 matrix_t* read_matrix (char* path);
+
+/**
+ * Writes matrix to file.
+ */
 void write_matrix (char* path, matrix_t* A);
+
+/**
+ * Destroys a matrix.
+ */
 void destroy_matrix (matrix_t* A);
+
+/*
+ * Prints a matrix.
+ */
 void print_matrix (matrix_t* A);
 
 
+/**
+ * Reads two matrices A, B from files (first two parameters).
+ * Calculates A*B and writes result to file (parameter three).
+ */
 int main (int argc, char** argv)
 {
     int P, rank, ret;
@@ -73,33 +141,39 @@ int main (int argc, char** argv)
 
     create_proc_info (&pinfo, (uint64_t)P, (uint64_t)rank);
 
+    /* read matrix A */
     A = read_matrix(argv[1]);
     if (A == NULL)
         return EXIT_FAILURE;
 
+    /* read matrix B */
     B = read_matrix(argv[1]);
     if (B == NULL)
         return EXIT_FAILURE;
 
+    /* calc C = A*B */
     C = AB(A, B, &pinfo);
 
-    if (rank == 0)
+    /* get all parts of C to root */
+    if (rank == 0) /* recv parts */
     {
-        for (int r = 1; r < P; ++r)
+        for (int r = 0; r < P; ++r)
         {
             create_partition (&part, C->rows, (uint64_t)P, (uint64_t)r);
-            MPI_Recv(C->m[part.start], part.len * C->cols, MPI_INT64_T, r, r, MPI_COMM_WORLD, NULL);
+            MPI_Recv(C->m[part.start], (int) (part.len * C->cols), MPI_INT64_T, r, r, MPI_COMM_WORLD, NULL);
         }
     }
-    else
+    else /* send parts */
     {
         create_partition (&part, C->rows, (uint64_t)P, (uint64_t)rank);
-        MPI_Send(C->m[part.start], part.len * C->cols, MPI_INT64_T, 0, rank, MPI_COMM_WORLD);
+        MPI_Send(C->m[part.start], (int)(part.len * C->cols), MPI_INT64_T, 0, rank, MPI_COMM_WORLD);
     }
 
+    /* write C */
     if (rank == 0)
         write_matrix(argv[3], C);
 
+    /* cleanup */
     destroy_matrix(A);
     destroy_matrix(B);
     destroy_matrix(C);
@@ -151,6 +225,7 @@ matrix_t* AB (matrix_t* A, matrix_t* B, proc_info_t* pinfo)
     matrix_t* C = create_matrix(A->rows, B->cols);
     uint64_t i, j, k;
     partition_t part;
+    /* split rows of A,C */
     create_partition(&part, A->rows, pinfo->P, pinfo->rank);
     for (i = part.start; i < part.end; ++i)
         for (j = 0; j < B->cols; ++j)
