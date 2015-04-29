@@ -1,5 +1,5 @@
 #include <assert.h>
-#include <mpi.h>
+#include <omp.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,25 +19,8 @@ typedef struct
     int64_t* data;
 } vector_t;
 
-typedef struct 
-{
-    uint64_t start; /* inclusive */
-    uint64_t end;   /* exclusive */
-    uint64_t len;
-} partition_t;
-
-typedef struct 
-{
-    uint64_t P;     /* number of processes */
-    uint64_t rank;  /* rank */
-} proc_info_t;
-
-
-void create_proc_info (proc_info_t* pinfo, uint64_t p, uint64_t r);
-void create_partition (partition_t* part, uint64_t n, uint64_t p, uint64_t r);
-
 vector_t* Ax (matrix_t* A, vector_t* x);
-matrix_t* AB (matrix_t* A, matrix_t* B, proc_info_t* pinfo);
+matrix_t* AB (matrix_t* A, matrix_t* B);
 
 vector_t* create_vector (uint64_t len);
 vector_t* read_vector (char* path);
@@ -54,77 +37,36 @@ void print_matrix (matrix_t* A);
 
 int main (int argc, char** argv)
 {
-    int P, rank, ret;
+    // vector_t* x, * z;
     matrix_t* A, * B, * C;
-    proc_info_t pinfo;
-    partition_t part;
 
     if (argc < 4)
         return EXIT_FAILURE;
-
-    if ((ret = MPI_Init(&argc, &argv)) != MPI_SUCCESS)
-    {
-        printf("Error initializing MPI\n");
-        MPI_Abort(MPI_COMM_WORLD, ret);
-    }
-
-    MPI_Comm_size(MPI_COMM_WORLD, &P);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-    create_proc_info (&pinfo, (uint64_t)P, (uint64_t)rank);
 
     A = read_matrix(argv[1]);
     if (A == NULL)
         return EXIT_FAILURE;
 
-    B = read_matrix(argv[1]);
+    B = read_matrix(argv[2]);
     if (B == NULL)
         return EXIT_FAILURE;
 
-    C = AB(A, B, &pinfo);
+    C = AB(A, B);
+    write_matrix(argv[3], C);
 
-    if (rank == 0)
-    {
-        for (int r = 1; r < P; ++r)
-        {
-            create_partition (&part, C->rows, (uint64_t)P, (uint64_t)r);
-            MPI_Recv(C->m[part.start], part.len * C->cols, MPI_INT64_T, r, r, MPI_COMM_WORLD, NULL);
-        }
-    }
-    else
-    {
-        create_partition (&part, C->rows, (uint64_t)P, (uint64_t)rank);
-        MPI_Send(C->m[part.start], part.len * C->cols, MPI_INT64_T, 0, rank, MPI_COMM_WORLD);
-    }
+    // x = read_vector(argv[2]);
+    // if (x == NULL)
+    //     return EXIT_FAILURE;
 
-    if (rank == 0)
-        write_matrix(argv[3], C);
+    // z = Ax(A, x);
+    // write_vector(argv[3], z);
 
+    // destroy_vector(x);
+    // destroy_vector(z);
     destroy_matrix(A);
     destroy_matrix(B);
     destroy_matrix(C);
-    MPI_Finalize();
     return EXIT_SUCCESS;
-}
-
-
-void create_proc_info (proc_info_t* pinfo, uint64_t P, uint64_t rank)
-{
-    pinfo->P = P;
-    pinfo->rank = rank;
-}
-
-
-void create_partition (partition_t* part, uint64_t n, uint64_t p, uint64_t r)
-{
-    uint64_t base_len, rest;
-    base_len = n / p;
-    rest = n % p;
-    part->start = r * base_len;
-    part->start += r < rest ? r : rest;
-    part->end = (r + 1) * base_len;
-    part->end += (r + 1) < rest ? (r + 1) : rest;
-    part->len = part->end - part->start;
 }
 
 
@@ -145,14 +87,13 @@ vector_t* Ax (matrix_t* A, vector_t* x)
 }
 
 
-matrix_t* AB (matrix_t* A, matrix_t* B, proc_info_t* pinfo)
+matrix_t* AB (matrix_t* A, matrix_t* B)
 {
     assert(A->cols == B->rows);
     matrix_t* C = create_matrix(A->rows, B->cols);
     uint64_t i, j, k;
-    partition_t part;
-    create_partition(&part, A->rows, pinfo->P, pinfo->rank);
-    for (i = part.start; i < part.end; ++i)
+    #pragma omp parallel for private(i, j, k)
+    for (i = 0; i < A->rows; ++i)
         for (j = 0; j < B->cols; ++j)
             for (k = 0; k < A->cols; ++k)
                 C->m[i][j] += A->m[i][k] * B->m[k][j];
@@ -328,7 +269,7 @@ matrix_t* read_matrix (char* path)
     A->rows = rows;
     A->cols = cols;
     A->data = calloc(rows * cols, sizeof(int64_t));
-    A->m = calloc(rows, sizeof(int64_t*));
+    A->m = malloc(rows * sizeof(int64_t*));
     if (A->data == NULL || A->m == NULL)
     {
         fprintf(stderr, "memory allocation failed\n");
