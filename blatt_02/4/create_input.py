@@ -1,4 +1,5 @@
 import random
+import sys
 
 
 def create_vector(path, size):
@@ -17,10 +18,29 @@ def create_matrix(path, rows, cols):
             f.write('\n')
 
 
+def usage():
+    print("python create_input.py matrix 1337 42 filename")
+    print("python create_input.py vector 1337 filename")
+
+
 def main():
-    # create_vector('vector', 10000)
-    create_matrix('matrix_big', 10000, 10000)
-    # create_matrix('matrix', 1000, 1000)
+    if len(sys.argv) < 2:
+        usage()
+        return
+    if sys.argv[1] == 'matrix':
+        if len(sys.argv) < 5:
+            usage()
+            return
+        else:
+            create_matrix(sys.argv[4], int(sys.argv[2]), int(sys.argv[3]))
+    elif sys.argv[1] == 'vector':
+        if len(sys.argv) < 4:
+            usage()
+            return
+        else:
+            create_vector(sys.argv[3], int(sys.argv[2]))
+    else:
+        usage()
 
 
 if __name__ == '__main__':
