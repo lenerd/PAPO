@@ -2,13 +2,17 @@
 #include "helpers.h"
 #include <mpi.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+
+void usage (void);
 
 
 int main (int argc, char** argv)
 {
     int ret, rank, size;
     process_info_t pinfo;
-    matrix_t* A, * B, * C, * D;
 
     if ((ret = MPI_Init(&argc, &argv)) != MPI_SUCCESS)
     {
@@ -16,30 +20,65 @@ int main (int argc, char** argv)
         MPI_Abort(MPI_COMM_WORLD, ret);
 
     }
-    
+
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     create_process_info(&pinfo, size, rank);
 
-    // A = create_matrix(10, 10, &pinfo);
-    A = matrix_read("./testmatrix", &pinfo);
-    B = matrix_read("./testmatrix", &pinfo);
-    matrix_print(A, &pinfo);
-    matrix_print(B, &pinfo);
+    if (argc < 5)
+    {
+        if (rank == 0)
+            usage();
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    }
 
-    C = matrix_dot(A, B, &pinfo);
-
-    D = matrix_scalar(A, 2);
-
-    matrix_print(C, &pinfo);
-    matrix_print(D, &pinfo);
-
-    matrix_destroy(A);
-    matrix_destroy(B);
-    matrix_destroy(C);
-    // write_matrix("testmatrix", A, &pinfo);
+    /* matrix x matrix */
+    if (strcmp(argv[1], "-m") == 0)
+    {
+        printf("mm\n");
+        matrix_t* A, * B, * C;
+        A = matrix_read(argv[2], &pinfo);
+        B = matrix_read(argv[3], &pinfo);
+        C = matrix_dot(A, B, &pinfo);
+        matrix_print(A, &pinfo);
+        matrix_print(B, &pinfo);
+        matrix_print(C, &pinfo);
+        matrix_write(argv[4], C, &pinfo);
+        matrix_destroy(A);
+        matrix_destroy(B);
+        matrix_destroy(C);
+    }
+    /* matrix x scalar */
+    else if (strcmp(argv[1], "-s") == 0)
+    {
+        printf("ms\n");
+        matrix_t* A, * C;
+        int64_t s;
+        A = matrix_read(argv[2], &pinfo);
+        s = scalar_read(argv[3]);
+        C = matrix_scalar(A, s);
+        matrix_write(argv[4], C, &pinfo);
+        matrix_destroy(A);
+        matrix_destroy(C);
+    }
+    else
+    {
+        if (rank == 0)
+            usage();
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    }
 
     MPI_Finalize();
 
-    return 0;
+    return EXIT_SUCCESS;
+}
+
+
+void usage (void)
+{
+    printf("Usage:\n");
+    printf("Matrix matrix multiplication\n");
+    printf("    matrix -m file_A file_B file_AxB\n");
+    printf("Matrix scalar multiplication\n");
+    printf("    matrix -s file_A file_s file_Axs\n");
 }
