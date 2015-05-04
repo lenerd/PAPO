@@ -10,10 +10,10 @@
 #include <unistd.h>
 
 
-matrix_t* scalar_matrix (matrix_t* A, int64_t s)
+matrix_t* matrix_scalar (matrix_t* A, int64_t s)
 {
     matrix_t* C;
-    C = copy_matrix(A);
+    C = matrix_copy(A);
     for (uint64_t i = C->row_part.start; i < C->row_part.end; ++i)
     {
         for (uint64_t j = 0; j < C->cols; ++j)
@@ -25,7 +25,7 @@ matrix_t* scalar_matrix (matrix_t* A, int64_t s)
 }
 
 
-matrix_t* dot_matrix (matrix_t* A, matrix_t* B, process_info_t* pinfo)
+matrix_t* matrix_dot (matrix_t* A, matrix_t* B, process_info_t* pinfo)
 {
     /* requirement for matrix multiplication */
     assert(A->cols == B->rows);
@@ -34,7 +34,7 @@ matrix_t* dot_matrix (matrix_t* A, matrix_t* B, process_info_t* pinfo)
     int rank_from, rank_to;
 
     /* result matrix */
-    C = create_matrix(A->rows, B->cols, pinfo);
+    C = matrix_create(A->rows, B->cols, pinfo);
 
     /* calc with local part of B */
     for (uint64_t i = A->row_part.start; i < A->row_part.end; ++i)
@@ -43,7 +43,7 @@ matrix_t* dot_matrix (matrix_t* A, matrix_t* B, process_info_t* pinfo)
                 C->m[i][j] += A->m[i][k] * B->m[k][j];
 
     /* temp matrix */
-    T = copy_matrix(B);
+    T = matrix_copy(B);
     for (int i = 0; i < pinfo->size; ++i)
     {
         rank_from = (pinfo->rank - 1 + pinfo->size) % pinfo->size;
@@ -72,12 +72,12 @@ matrix_t* dot_matrix (matrix_t* A, matrix_t* B, process_info_t* pinfo)
             }
         }
     }
-    destroy_matrix(T);
+    matrix_destroy(T);
     return C;
 }
 
 
-matrix_t* copy_matrix (matrix_t* A)
+matrix_t* matrix_copy (matrix_t* A)
 {
     matrix_t* B;
 
@@ -115,7 +115,7 @@ matrix_t* copy_matrix (matrix_t* A)
 }
 
 
-matrix_t* create_matrix (uint64_t rows, uint64_t cols, process_info_t* pinfo)
+matrix_t* matrix_create (uint64_t rows, uint64_t cols, process_info_t* pinfo)
 {
     matrix_t* A;
 
@@ -151,7 +151,7 @@ matrix_t* create_matrix (uint64_t rows, uint64_t cols, process_info_t* pinfo)
 }
 
 
-matrix_t* read_matrix (char* path, process_info_t* pinfo)
+matrix_t* matrix_read (char* path, process_info_t* pinfo)
 {
     matrix_t* A;
     uint64_t rows, cols;
@@ -231,7 +231,7 @@ matrix_t* read_matrix (char* path, process_info_t* pinfo)
 }
 
 
-void write_matrix (char* path, matrix_t* A, process_info_t* pinfo)
+void matrix_write (char* path, matrix_t* A, process_info_t* pinfo)
 {
     FILE* file = NULL;
     int state = -1;
@@ -324,7 +324,7 @@ void write_matrix (char* path, matrix_t* A, process_info_t* pinfo)
 }
 
 
-void destroy_matrix (matrix_t* A)
+void matrix_destroy (matrix_t* A)
 {
     free(A->m);
     free(A->data);
@@ -332,7 +332,7 @@ void destroy_matrix (matrix_t* A)
 }
 
 
-void print_matrix (matrix_t* A, process_info_t* pinfo)
+void matrix_print (matrix_t* A, process_info_t* pinfo)
 {
     /* print header */
     if (pinfo->rank == 0)

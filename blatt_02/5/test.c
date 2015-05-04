@@ -22,21 +22,21 @@ int main (int argc, char** argv)
     create_process_info(&pinfo, size, rank);
 
     // A = create_matrix(10, 10, &pinfo);
-    A = read_matrix("./testmatrix", &pinfo);
-    B = read_matrix("./testmatrix", &pinfo);
-    print_matrix(A, &pinfo);
-    print_matrix(B, &pinfo);
+    A = matrix_read("./testmatrix", &pinfo);
+    B = matrix_read("./testmatrix", &pinfo);
+    matrix_print(A, &pinfo);
+    matrix_print(B, &pinfo);
 
-    C = dot_matrix(A, B, &pinfo);
+    C = matrix_dot(A, B, &pinfo);
 
-    D = scalar_matrix(A, 2);
+    D = matrix_scalar(A, 2);
 
-    print_matrix(C, &pinfo);
-    print_matrix(D, &pinfo);
+    matrix_print(C, &pinfo);
+    matrix_print(D, &pinfo);
 
-    destroy_matrix(A);
-    destroy_matrix(B);
-    destroy_matrix(C);
+    matrix_destroy(A);
+    matrix_destroy(B);
+    matrix_destroy(C);
     // write_matrix("testmatrix", A, &pinfo);
 
     MPI_Finalize();
