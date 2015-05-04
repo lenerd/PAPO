@@ -35,14 +35,10 @@ int main (int argc, char** argv)
     /* matrix x matrix */
     if (strcmp(argv[1], "-m") == 0)
     {
-        printf("mm\n");
         matrix_t* A, * B, * C;
         A = matrix_read(argv[2], &pinfo);
         B = matrix_read(argv[3], &pinfo);
         C = matrix_dot(A, B, &pinfo);
-        matrix_print(A, &pinfo);
-        matrix_print(B, &pinfo);
-        matrix_print(C, &pinfo);
         matrix_write(argv[4], C, &pinfo);
         matrix_destroy(A);
         matrix_destroy(B);
@@ -51,7 +47,6 @@ int main (int argc, char** argv)
     /* matrix x scalar */
     else if (strcmp(argv[1], "-s") == 0)
     {
-        printf("ms\n");
         matrix_t* A, * C;
         int64_t s;
         A = matrix_read(argv[2], &pinfo);
