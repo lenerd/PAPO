@@ -44,7 +44,7 @@ matrix_t* matrix_dot (matrix_t* A, matrix_t* B, process_info_t* pinfo)
 
     /* temp matrix */
     T = matrix_copy(B);
-    for (int i = 0; i < pinfo->size; ++i)
+    for (int i = 0; i < pinfo->size - 1; ++i)
     {
         rank_from = (pinfo->rank - 1 + pinfo->size) % pinfo->size;
         rank_to = (pinfo->rank + 1) % pinfo->size;
