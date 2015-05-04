@@ -11,17 +11,95 @@
 
 
 
-// matrix_t* AB (matrix_t* A, matrix_t* B)
-// {
-//     assert(A->cols == B->rows);
-//     matrix_t* C = create_matrix(A->rows, B->cols);
-//     uint64_t i, j, k;
-//     for (i = 0; i < A->rows; ++i)
-//         for (j = 0; j < B->cols; ++j)
-//             for (k = 0; k < A->cols; ++k)
-//                 C->m[i][j] += A->m[i][k] * B->m[k][j];
-//     return C;
-// }
+
+matrix_t* dot_matrix (matrix_t* A, matrix_t* B, process_info_t* pinfo)
+{
+    /* requirement for matrix multiplication */
+    assert(A->cols == B->rows);
+
+    matrix_t* C, * T;
+    int rank_from, rank_to;
+
+    /* result matrix */
+    C = create_matrix(A->rows, B->cols, pinfo);
+
+    /* calc with local part of B */
+    for (uint64_t i = A->row_part.start; i < A->row_part.end; ++i)
+        for (uint64_t k = B->row_part.start; k < B->row_part.end; ++k)
+            for (uint64_t j = 0; j < B->cols; ++j)
+                C->m[i][j] += A->m[i][k] * B->m[k][j];
+
+    /* temp matrix */
+    T = copy_matrix(B);
+    for (int i = 0; i < pinfo->size; ++i)
+    {
+        rank_from = (pinfo->rank - 1 + pinfo->size) % pinfo->size;
+        rank_to = (pinfo->rank + 1) % pinfo->size;
+        /* shift matrix part */
+        MPI_Sendrecv_replace(T->data, (int) T->row_part.max_len * T->cols, MPI_INT64_T, rank_from, 0, rank_to, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        /* shift meta data */
+        MPI_Sendrecv_replace(&T->row_part, 4, MPI_UINT64_T, rank_from, 0, rank_to, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        /* reset row pointers */
+        memset(T->m, 0, T->rows * sizeof(int64_t*));
+        /* calculate new row pointers */
+        for (uint64_t i = T->row_part.start; i < T->row_part.end; ++i)
+        {
+            T->m[i] = T->data + (i - T->row_part.start) * T->cols;
+        }
+
+        /* calculate part with next sub matrix */
+        for (uint64_t i = A->row_part.start; i < A->row_part.end; ++i)
+        {
+            for (uint64_t k = T->row_part.start; k < T->row_part.end; ++k)
+            {
+                for (uint64_t j = 0; j < B->cols; ++j)
+                {
+                    C->m[i][j] += A->m[i][k] * T->m[k][j];
+                }
+            }
+        }
+    }
+    destroy_matrix(T);
+    return C;
+}
+
+
+matrix_t* copy_matrix (matrix_t* A)
+{
+    matrix_t* B;
+
+    /* allocate memory for matrix_t struct */
+    B = (matrix_t*) malloc(sizeof(matrix_t));
+    if (B == NULL)
+    {
+        fprintf(stderr, "memory allocation failed\n");
+        return NULL;
+    }
+    memcpy((void*) B, (void*) A, sizeof(matrix_t));
+
+    /* initialize matrix struct */
+    memcpy((void*) &B->row_part, (void*) &A->row_part, sizeof(partition_t));
+    B->rows = A->rows;
+    B->cols = A->cols;
+
+    /* allocate memory */
+    B->data = calloc(B->row_part.max_len *  B->cols, sizeof(int64_t));
+    B->m = calloc(B->rows, sizeof(int64_t*));
+    if (B->data == NULL || B->m == NULL)
+    {
+        fprintf(stderr, "memory allocation failed\n");
+        free(B);
+        return NULL;
+    }
+    memcpy((void*) B->data, (void*) A->data, B->row_part.max_len * B->cols * sizeof(int64_t));
+
+    /* initialize row pointers */
+    for (uint64_t i = B->row_part.start; i < B->row_part.end; ++i)
+    {
+        B->m[i] = B->data + (i - B->row_part.start) * B->cols;
+    }
+    return B;
+}
 
 
 matrix_t* create_matrix (uint64_t rows, uint64_t cols, process_info_t* pinfo)
@@ -42,7 +120,7 @@ matrix_t* create_matrix (uint64_t rows, uint64_t cols, process_info_t* pinfo)
     A->cols = cols;
 
     /* allocate memory */
-    A->data = calloc(A->row_part.len *  cols, sizeof(int64_t));
+    A->data = calloc(A->row_part.max_len *  cols, sizeof(int64_t));
     A->m = calloc(rows, sizeof(int64_t*));
     if (A->data == NULL || A->m == NULL)
     {

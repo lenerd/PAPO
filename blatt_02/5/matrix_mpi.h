@@ -22,7 +22,12 @@ typedef struct
 /**
  * Calculates matrix vector product A*x.
  */
-matrix_t* AB (matrix_t* A, matrix_t* B);
+matrix_t* AB (matrix_t* A, matrix_t* B, process_info_t* pinfo);
+
+/**
+ * Copys a matrix.
+ */
+matrix_t* copy_matrix (matrix_t* A);
 
 
 /**
