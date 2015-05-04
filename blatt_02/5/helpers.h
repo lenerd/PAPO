@@ -45,4 +45,10 @@ void create_partition (partition_t* part, process_info_t* pinfo, uint64_t n);
  */
 uint64_t skip_lines (FILE* f, uint64_t lines);
 
+
+/**
+ * Reads a scalar value from a file.
+ */
+int64_t scalar_read (char* path);
+
 #endif // HELPERS_H

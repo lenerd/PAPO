@@ -37,3 +37,30 @@ uint64_t skip_lines (FILE* f, uint64_t lines)
     }
     return cnt;
 }
+
+
+int64_t scalar_read (char* path)
+{
+    FILE* file;
+    int64_t s;
+
+    /* open file */
+    file = fopen(path, "r");
+    if (!file)
+    {
+        perror("File opening failed\n");
+        return 0;
+    }
+
+    /* scan matrix dimensions */
+    if (fscanf(file, "%ld\n", &s) != 1)
+    {
+        fprintf(stderr, "invalid file\n");
+        fclose(file);
+        return 0;
+    }
+
+    /* cleanup */
+    fclose(file);
+    return s;
+}
