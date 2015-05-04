@@ -8,7 +8,7 @@ int main (int argc, char** argv)
 {
     int ret, rank, size;
     process_info_t pinfo;
-    matrix_t* A, * B, * C;
+    matrix_t* A, * B, * C, * D;
 
     if ((ret = MPI_Init(&argc, &argv)) != MPI_SUCCESS)
     {
@@ -25,13 +25,14 @@ int main (int argc, char** argv)
     A = read_matrix("./testmatrix", &pinfo);
     B = read_matrix("./testmatrix", &pinfo);
     print_matrix(A, &pinfo);
-    MPI_Barrier(MPI_COMM_WORLD);
     print_matrix(B, &pinfo);
-    MPI_Barrier(MPI_COMM_WORLD);
 
-    C = AB(A, B, &pinfo);
+    C = dot_matrix(A, B, &pinfo);
+
+    D = scalar_matrix(A, 2);
 
     print_matrix(C, &pinfo);
+    print_matrix(D, &pinfo);
 
     destroy_matrix(A);
     destroy_matrix(B);

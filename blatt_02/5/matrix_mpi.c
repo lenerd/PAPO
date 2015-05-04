@@ -10,6 +10,19 @@
 #include <unistd.h>
 
 
+matrix_t* scalar_matrix (matrix_t* A, int64_t s)
+{
+    matrix_t* C;
+    C = copy_matrix(A);
+    for (uint64_t i = C->row_part.start; i < C->row_part.end; ++i)
+    {
+        for (uint64_t j = 0; j < C->cols; ++j)
+        {
+            C->m[i][j] *= s;
+        }
+    }
+    return C;
+}
 
 
 matrix_t* dot_matrix (matrix_t* A, matrix_t* B, process_info_t* pinfo)
@@ -36,7 +49,7 @@ matrix_t* dot_matrix (matrix_t* A, matrix_t* B, process_info_t* pinfo)
         rank_from = (pinfo->rank - 1 + pinfo->size) % pinfo->size;
         rank_to = (pinfo->rank + 1) % pinfo->size;
         /* shift matrix part */
-        MPI_Sendrecv_replace(T->data, (int) T->row_part.max_len * T->cols, MPI_INT64_T, rank_from, 0, rank_to, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Sendrecv_replace(T->data, (int) (T->row_part.max_len * T->cols), MPI_INT64_T, rank_from, 0, rank_to, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         /* shift meta data */
         MPI_Sendrecv_replace(&T->row_part, 4, MPI_UINT64_T, rank_from, 0, rank_to, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         /* reset row pointers */
@@ -343,4 +356,5 @@ void print_matrix (matrix_t* A, process_info_t* pinfo)
     {
         MPI_Send(NULL, 0, MPI_C_BOOL, pinfo->rank + 1, 0, MPI_COMM_WORLD);
     }
+    MPI_Barrier(MPI_COMM_WORLD);
 }
