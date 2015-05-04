@@ -28,6 +28,7 @@ matrix_t* create_matrix (uint64_t rows, uint64_t cols, process_info_t* pinfo)
 {
     matrix_t* A;
 
+    /* allocate memory for matrix_t struct */
     A = (matrix_t*) malloc(sizeof(matrix_t));
     if (A == NULL)
     {
@@ -35,19 +36,22 @@ matrix_t* create_matrix (uint64_t rows, uint64_t cols, process_info_t* pinfo)
         return NULL;
     }
 
+    /* initialize matrix struct */
     create_partition(&A->row_part, pinfo, rows);
-
     A->rows = rows;
     A->cols = cols;
+
+    /* allocate memory */
     A->data = calloc(A->row_part.len *  cols, sizeof(int64_t));
     A->m = calloc(rows, sizeof(int64_t*));
-
     if (A->data == NULL || A->m == NULL)
     {
         fprintf(stderr, "memory allocation failed\n");
         free(A);
         return NULL;
     }
+
+    /* initialize row pointers */
     for (uint64_t i = A->row_part.start; i < A->row_part.end; ++i)
     {
         A->m[i] = A->data + (i - A->row_part.start) * cols;
@@ -61,12 +65,16 @@ matrix_t* read_matrix (char* path, process_info_t* pinfo)
     matrix_t* A;
     uint64_t rows, cols;
     FILE* file;
+
+    /* allocate memory for matrix_t struct */
     A = (matrix_t*) malloc(sizeof(matrix_t));
     if (A == NULL)
     {
         fprintf(stderr, "memory allocation failed\n");
         return NULL;
     }
+
+    /* open file */
     file = fopen(path, "r");
     if (!file)
     {
@@ -74,6 +82,8 @@ matrix_t* read_matrix (char* path, process_info_t* pinfo)
         free(A);
         return NULL;
     }
+
+    /* scan matrix dimensions */
     if (fscanf(file, "%lu %lu\n", &rows, &cols) != 2 || rows == 0 || cols == 0)
     {
         fprintf(stderr, "invalid file\n");
@@ -81,9 +91,13 @@ matrix_t* read_matrix (char* path, process_info_t* pinfo)
         free(A);
         return NULL;
     }
+
+    /* initialize matrix struct */
     A->rows = rows;
     A->cols = cols;
     create_partition(&A->row_part, pinfo, rows);
+
+    /* allocate memory */
     A->data = calloc(A->row_part.max_len * cols, sizeof(int64_t));
     A->m = calloc(rows, sizeof(int64_t*));
     if (A->data == NULL || A->m == NULL)
@@ -93,11 +107,17 @@ matrix_t* read_matrix (char* path, process_info_t* pinfo)
         free(A);
         return NULL;
     }
+
+    /* initialize row pointer */
     for (uint64_t i = A->row_part.start; i < A->row_part.end; ++i)
     {
         A->m[i] = A->data + (i - A->row_part.start) * cols;
     }
+
+    /* skip offset to local part */
     skip_lines(file, A->row_part.start);
+
+    /* read rows of local part */
     for (uint64_t i = A->row_part.start; i < A->row_part.end; ++i)
     {
         for (uint64_t j = 0; j < cols; ++j)
@@ -113,7 +133,8 @@ matrix_t* read_matrix (char* path, process_info_t* pinfo)
             }
         }
     }
-        
+
+    /* cleanup */
     fclose(file);
     return A;
 }
@@ -150,7 +171,7 @@ void write_matrix (char* path, matrix_t* A, process_info_t* pinfo)
             return;
         }
     }
-    else // pinfo->rank != 0
+    else /* pinfo->rank != 0 */
     {
         /* wait for last process */
         MPI_Recv(&state, 1, MPI_INT, pinfo->rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
@@ -222,20 +243,24 @@ void destroy_matrix (matrix_t* A)
 
 void print_matrix (matrix_t* A, process_info_t* pinfo)
 {
+    /* print header */
     if (pinfo->rank == 0)
     {
         printf("[Matrix: %lu x %lu]\n", A->rows, A->cols);
     }
+    /* wait for last process */
     if (pinfo->rank > 0)
     {
         MPI_Recv(NULL, 0, MPI_C_BOOL, pinfo->rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     }
+    /* print local part */
     for (uint64_t i = A->row_part.start; i < A->row_part.end; ++i)
     {
         for (uint64_t j = 0; j < A->cols; ++j)
             printf("%ld ", A->m[i][j]);
         printf("\n");
     }
+    /* tell next process to go on */
     if (pinfo->rank < pinfo->size - 1)
     {
         MPI_Send(NULL, 0, MPI_C_BOOL, pinfo->rank + 1, 0, MPI_COMM_WORLD);
