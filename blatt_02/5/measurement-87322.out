@@ -1,0 +1,52 @@
+matrix-scalar multiplication
+1 processes
+mpirun -np 1 ./matrix -s matrix-a scalar matrix-s-out-1
+t_min = 2.356 s
+t_max = 2.356 s
+
+2 processes
+mpirun -np 2 ./matrix -s matrix-a scalar matrix-s-out-2
+t_min = 1.265 s
+t_max = 1.930 s
+
+4 processes
+mpirun -np 4 ./matrix -s matrix-a scalar matrix-s-out-4
+t_min = 0.719 s
+t_max = 1.721 s
+
+8 processes
+mpirun -np 8 ./matrix -s matrix-a scalar matrix-s-out-8
+t_min = 0.449 s
+t_max = 1.627 s
+
+16 processes
+mpirun -np 16 ./matrix -s matrix-a scalar matrix-s-out-16
+t_min = 0.521 s
+t_max = 2.153 s
+
+matrix-matrix multiplication
+1 processes
+mpirun -np 1 ./matrix -m matrix-a matrix-b matrix-m-out-1
+t_min = 24.090 s
+t_max = 24.090 s
+
+2 processes
+mpirun -np 2 ./matrix -m matrix-a matrix-b matrix-m-out-2
+t_min = 12.034 s
+t_max = 15.477 s
+
+4 processes
+mpirun -np 4 ./matrix -m matrix-a matrix-b matrix-m-out-4
+t_min = 6.527 s
+t_max = 11.738 s
+
+8 processes
+mpirun -np 8 ./matrix -m matrix-a matrix-b matrix-m-out-8
+t_min = 4.027 s
+t_max = 10.107 s
+
+16 processes
+mpirun -np 16 ./matrix -m matrix-a matrix-b matrix-m-out-16
+t_min = 3.633 s
+t_max = 10.736 s
+
