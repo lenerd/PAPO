@@ -79,8 +79,8 @@ int main (int argc, char** argv)
 
     if (rank == 0)
     {
-        printf("t_min = %lf s\n", min_seconds);
-        printf("t_max = %lf s\n", max_seconds);
+        printf("t_min = %.3lf s\n", min_seconds);
+        printf("t_max = %.3lf s\n", max_seconds);
     }
 
     MPI_Finalize();
