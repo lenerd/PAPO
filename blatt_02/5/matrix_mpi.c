@@ -31,7 +31,6 @@ matrix_t* matrix_dot (matrix_t* A, matrix_t* B, process_info_t* pinfo)
     assert(A->cols == B->rows);
 
     matrix_t* C, * T;
-    int rank_from, rank_to;
 
     /* result matrix */
     C = matrix_create(A->rows, B->cols, pinfo);
@@ -44,33 +43,31 @@ matrix_t* matrix_dot (matrix_t* A, matrix_t* B, process_info_t* pinfo)
 
     /* temp matrix */
     T = matrix_copy(B);
+
     for (int i = 0; i < pinfo->size - 1; ++i)
     {
+        int rank_from, rank_to;
         rank_from = (pinfo->rank - 1 + pinfo->size) % pinfo->size;
         rank_to = (pinfo->rank + 1) % pinfo->size;
+
         /* shift matrix part */
-        MPI_Sendrecv_replace(T->data, (int) (T->row_part.max_len * T->cols), MPI_DOUBLE, rank_from, 0, rank_to, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Sendrecv_replace(T->data, (int) (T->row_part.max_len * T->cols), MPI_DOUBLE,
+                             rank_from, 0, rank_to, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         /* shift meta data */
-        MPI_Sendrecv_replace(&T->row_part, 4, MPI_UINT64_T, rank_from, 0, rank_to, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Sendrecv_replace(&T->row_part, 4, MPI_UINT64_T,
+                             rank_from, 0, rank_to, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
         /* reset row pointers */
         memset(T->m, 0, T->rows * sizeof(double*));
         /* calculate new row pointers */
         for (uint64_t i = T->row_part.start; i < T->row_part.end; ++i)
-        {
             T->m[i] = T->data + (i - T->row_part.start) * T->cols;
-        }
 
         /* calculate part with next sub matrix */
         for (uint64_t i = A->row_part.start; i < A->row_part.end; ++i)
-        {
             for (uint64_t k = T->row_part.start; k < T->row_part.end; ++k)
-            {
                 for (uint64_t j = 0; j < B->cols; ++j)
-                {
                     C->m[i][j] += A->m[i][k] * T->m[k][j];
-                }
-            }
-        }
     }
     matrix_destroy(T);
     return C;
