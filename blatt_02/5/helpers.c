@@ -39,10 +39,10 @@ uint64_t skip_lines (FILE* f, uint64_t lines)
 }
 
 
-int64_t scalar_read (char* path)
+double scalar_read (char* path)
 {
     FILE* file;
-    int64_t s;
+    double s;
 
     /* open file */
     file = fopen(path, "r");
@@ -53,7 +53,7 @@ int64_t scalar_read (char* path)
     }
 
     /* scan matrix dimensions */
-    if (fscanf(file, "%ld\n", &s) != 1)
+    if (fscanf(file, "%lf\n", &s) != 1)
     {
         fprintf(stderr, "invalid file\n");
         fclose(file);

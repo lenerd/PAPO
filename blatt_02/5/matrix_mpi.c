@@ -10,7 +10,7 @@
 #include <unistd.h>
 
 
-matrix_t* matrix_scalar (matrix_t* A, int64_t s)
+matrix_t* matrix_scalar (matrix_t* A, double s)
 {
     matrix_t* C;
     C = matrix_copy(A);
@@ -49,11 +49,11 @@ matrix_t* matrix_dot (matrix_t* A, matrix_t* B, process_info_t* pinfo)
         rank_from = (pinfo->rank - 1 + pinfo->size) % pinfo->size;
         rank_to = (pinfo->rank + 1) % pinfo->size;
         /* shift matrix part */
-        MPI_Sendrecv_replace(T->data, (int) (T->row_part.max_len * T->cols), MPI_INT64_T, rank_from, 0, rank_to, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Sendrecv_replace(T->data, (int) (T->row_part.max_len * T->cols), MPI_DOUBLE, rank_from, 0, rank_to, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         /* shift meta data */
         MPI_Sendrecv_replace(&T->row_part, 4, MPI_UINT64_T, rank_from, 0, rank_to, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         /* reset row pointers */
-        memset(T->m, 0, T->rows * sizeof(int64_t*));
+        memset(T->m, 0, T->rows * sizeof(double*));
         /* calculate new row pointers */
         for (uint64_t i = T->row_part.start; i < T->row_part.end; ++i)
         {
@@ -96,15 +96,15 @@ matrix_t* matrix_copy (matrix_t* A)
     B->cols = A->cols;
 
     /* allocate memory */
-    B->data = calloc(B->row_part.max_len *  B->cols, sizeof(int64_t));
-    B->m = calloc(B->rows, sizeof(int64_t*));
+    B->data = calloc(B->row_part.max_len *  B->cols, sizeof(double));
+    B->m = calloc(B->rows, sizeof(double*));
     if (B->data == NULL || B->m == NULL)
     {
         fprintf(stderr, "memory allocation failed\n");
         free(B);
         return NULL;
     }
-    memcpy((void*) B->data, (void*) A->data, B->row_part.max_len * B->cols * sizeof(int64_t));
+    memcpy((void*) B->data, (void*) A->data, B->row_part.max_len * B->cols * sizeof(double));
 
     /* initialize row pointers */
     for (uint64_t i = B->row_part.start; i < B->row_part.end; ++i)
@@ -133,8 +133,8 @@ matrix_t* matrix_create (uint64_t rows, uint64_t cols, process_info_t* pinfo)
     A->cols = cols;
 
     /* allocate memory */
-    A->data = calloc(A->row_part.max_len *  cols, sizeof(int64_t));
-    A->m = calloc(rows, sizeof(int64_t*));
+    A->data = calloc(A->row_part.max_len *  cols, sizeof(double));
+    A->m = calloc(rows, sizeof(double*));
     if (A->data == NULL || A->m == NULL)
     {
         fprintf(stderr, "memory allocation failed\n");
@@ -189,8 +189,8 @@ matrix_t* matrix_read (char* path, process_info_t* pinfo)
     create_partition(&A->row_part, pinfo, rows);
 
     /* allocate memory */
-    A->data = calloc(A->row_part.max_len * cols, sizeof(int64_t));
-    A->m = calloc(rows, sizeof(int64_t*));
+    A->data = calloc(A->row_part.max_len * cols, sizeof(double));
+    A->m = calloc(rows, sizeof(double*));
     if (A->data == NULL || A->m == NULL)
     {
         fprintf(stderr, "memory allocation failed\n");
@@ -213,7 +213,7 @@ matrix_t* matrix_read (char* path, process_info_t* pinfo)
     {
         for (uint64_t j = 0; j < cols; ++j)
         {
-            if (fscanf(file, "%ld", &A->m[i][j]) != 1)
+            if (fscanf(file, "%lf", &A->m[i][j]) != 1)
             {
                 fprintf(stderr, "invalid file\n");
                 fclose(file);
@@ -293,7 +293,7 @@ void matrix_write (char* path, matrix_t* A, process_info_t* pinfo)
     {
         for (uint64_t j = 0; j < A->cols; ++j)
         {
-            if ((state = fprintf(file, "%ld ", A->m[i][j])) < 0)
+            if ((state = fprintf(file, "%.3lf ", A->m[i][j])) < 0)
             {
                 fprintf(stderr, "error writing to file\n");
                 fclose(file);
@@ -348,7 +348,7 @@ void matrix_print (matrix_t* A, process_info_t* pinfo)
     for (uint64_t i = A->row_part.start; i < A->row_part.end; ++i)
     {
         for (uint64_t j = 0; j < A->cols; ++j)
-            printf("%ld ", A->m[i][j]);
+            printf("%lf ", A->m[i][j]);
         printf("\n");
     }
     /* tell next process to go on */

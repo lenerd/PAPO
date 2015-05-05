@@ -49,6 +49,6 @@ uint64_t skip_lines (FILE* f, uint64_t lines);
 /**
  * Reads a scalar value from a file.
  */
-int64_t scalar_read (char* path);
+double scalar_read (char* path);
 
 #endif // HELPERS_H

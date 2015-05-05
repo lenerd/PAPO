@@ -14,15 +14,15 @@ typedef struct
     uint64_t rows;
     partition_t row_part;
     uint64_t cols;
-    int64_t* data;
-    int64_t** m;
+    double* data;
+    double** m;
 } matrix_t;
 
 
 /**
  * Calculates scalar product A*s.
  */
-matrix_t* matrix_scalar (matrix_t* A, int64_t s);
+matrix_t* matrix_scalar (matrix_t* A, double s);
 
 /**
  * Calculates matrix product A*B.
