@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <time.h>
 
 
 /**
@@ -50,5 +51,17 @@ uint64_t skip_lines (FILE* f, uint64_t lines);
  * Reads a scalar value from a file.
  */
 double scalar_read (char* path);
+
+
+/**
+ * Calculates difference between two measurements.
+ */
+void time_difference (struct timespec* src_a, struct timespec* src_b, struct timespec* dst);
+
+
+/**
+ * Converts time value to double.
+ */
+double time_to_double (struct timespec* src);
 
 #endif // HELPERS_H

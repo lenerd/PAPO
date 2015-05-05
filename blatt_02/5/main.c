@@ -16,7 +16,8 @@ int main (int argc, char** argv)
     int ret, rank, size;
     process_info_t pinfo;
     struct timespec start_time, end_time;
-    long seconds, min_seconds, max_seconds;
+    struct timespec diff_time;
+    double seconds, min_seconds, max_seconds;
 
     if ((ret = MPI_Init(&argc, &argv)) != MPI_SUCCESS)
     {
@@ -71,14 +72,15 @@ int main (int argc, char** argv)
 
     clock_gettime(CLOCK_REALTIME, &end_time);
 
-    seconds = end_time.tv_sec - start_time.tv_sec;
-    MPI_Reduce(&seconds, &min_seconds, 1, MPI_LONG, MPI_MIN, 0, MPI_COMM_WORLD);
-    MPI_Reduce(&seconds, &max_seconds, 1, MPI_LONG, MPI_MAX, 0, MPI_COMM_WORLD);
+    time_difference(&end_time, &start_time, &diff_time);
+    seconds = time_to_double(&diff_time);
+    MPI_Reduce(&seconds, &min_seconds, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&seconds, &max_seconds, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
     if (rank == 0)
     {
-        printf("t_min = %ld s\n", min_seconds);
-        printf("t_max = %ld s\n", max_seconds);
+        printf("t_min = %lf s\n", min_seconds);
+        printf("t_max = %lf s\n", max_seconds);
     }
 
     MPI_Finalize();
