@@ -1,5 +1,6 @@
 CC=mpicc
 CFLAGS=-std=c11 -Wall -Wextra -pedantic -ggdb -O0 -Wconversion
+LFLAGS=-lrt
 
 .PHONY: all clean
 
@@ -9,7 +10,7 @@ aufgabe-5.1: aufgabe-5.1.o
 	$(CC) $(CFLAGS) -o $@ $^
 
 matrix: main.o matrix_mpi.o helpers.o
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) -o $@ $(CFLAGS) $^ $(LFLAGS)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $^

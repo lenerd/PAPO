@@ -1,9 +1,11 @@
+#define _POSIX_C_SOURCE 199309L
 #include "matrix_mpi.h"
 #include "helpers.h"
 #include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 
 void usage (void);
@@ -13,6 +15,8 @@ int main (int argc, char** argv)
 {
     int ret, rank, size;
     process_info_t pinfo;
+    struct timespec start_time, end_time;
+    long seconds, min_seconds, max_seconds;
 
     if ((ret = MPI_Init(&argc, &argv)) != MPI_SUCCESS)
     {
@@ -20,6 +24,8 @@ int main (int argc, char** argv)
         MPI_Abort(MPI_COMM_WORLD, ret);
 
     }
+
+    clock_gettime(CLOCK_REALTIME, &start_time);
 
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -61,6 +67,18 @@ int main (int argc, char** argv)
         if (rank == 0)
             usage();
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    }
+
+    clock_gettime(CLOCK_REALTIME, &end_time);
+
+    seconds = end_time.tv_sec - start_time.tv_sec;
+    MPI_Reduce(&seconds, &min_seconds, 1, MPI_LONG, MPI_MIN, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&seconds, &max_seconds, 1, MPI_LONG, MPI_MAX, 0, MPI_COMM_WORLD);
+
+    if (rank == 0)
+    {
+        printf("t_min = %ld s\n", min_seconds);
+        printf("t_max = %ld s\n", max_seconds);
     }
 
     MPI_Finalize();
