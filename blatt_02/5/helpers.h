@@ -42,6 +42,18 @@ void create_partition (partition_t* part, process_info_t* pinfo, uint64_t n);
 
 
 /**
+ * Count rows in a file.
+ */
+uint64_t count_rows (FILE* file);
+
+
+/**
+ * Count rows in a file.
+ */
+uint64_t count_cols (FILE* file);
+
+
+/**
  * Skip n lines in file.
  */
 uint64_t skip_lines (FILE* f, uint64_t lines);

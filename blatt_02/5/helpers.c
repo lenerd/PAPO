@@ -26,11 +26,47 @@ void create_partition (partition_t* part, process_info_t* pinfo, uint64_t n)
 }
 
 
-uint64_t skip_lines (FILE* f, uint64_t lines)
+uint64_t count_rows (FILE* file)
+{
+    fpos_t file_p;
+    int c;
+    uint64_t lines = 0;
+    fgetpos(file, &file_p);
+    rewind(file);
+    while ((c = fgetc(file)) != EOF)
+    {
+        if (c == '\n')
+            ++lines;
+    }
+    fsetpos(file, &file_p);
+    return lines;
+}
+
+
+uint64_t count_cols (FILE* file)
+{
+    fpos_t file_p;
+    int c;
+    uint64_t cols = 0;
+    fgetpos(file, &file_p);
+    rewind(file);
+    while ((c = fgetc(file)) != EOF)
+    {
+        if (c == ' ')
+            ++cols;
+        else if (c == '\n')
+            break;
+    }
+    fsetpos(file, &file_p);
+    return cols;
+}
+
+
+uint64_t skip_lines (FILE* file, uint64_t lines)
 {
     int c;
     uint64_t cnt = 0;
-    while (cnt < lines && (c = fgetc(f)) != EOF)
+    while (cnt < lines && (c = fgetc(file)) != EOF)
     {
         if (c == '\n')
             ++cnt;
