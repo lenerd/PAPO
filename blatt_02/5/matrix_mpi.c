@@ -177,13 +177,6 @@ matrix_t* matrix_read (char* path, process_info_t* pinfo)
     /* scan matrix dimensions */
     rows = count_rows(file);
     cols = count_cols(file);
-    // if (fscanf(file, "%lu %lu\n", &rows, &cols) != 2 || rows == 0 || cols == 0)
-    // {
-    //     fprintf(stderr, "invalid file\n");
-    //     fclose(file);
-    //     free(A);
-    //     return NULL;
-    // }
 
     /* initialize matrix struct */
     A->rows = rows;
@@ -252,17 +245,6 @@ void matrix_write (char* path, matrix_t* A, process_info_t* pinfo)
             }
             return;
         }
-        // /* write file header */
-        // if ((state = fprintf(file, "%lu %lu\n", A->rows, A->cols)) < 0)
-        // {
-        //     fprintf(stderr, "error writing to file\n");
-        //     fclose(file);
-        //     if (pinfo->size > 1)
-        //     {
-        //         MPI_Send(&state, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
-        //     }
-        //     return;
-        // }
     }
     else /* pinfo->rank != 0 */
     {
