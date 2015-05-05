@@ -8,6 +8,7 @@ echo "matrix-scalar multiplication"
 for i in 1 2 4 8 16
 do
     echo "$i processes"
+    echo "mpirun -np $i ./matrix -s matrix-a scalar matrix-s-out-$1"
     mpirun -np $i ./matrix -s matrix-a scalar matrix-out-$1
     echo ""
 done
@@ -16,6 +17,7 @@ echo "matrix-matrix multiplication"
 for i in 1 2 4 8 16
 do
     echo "$i processes"
+    echo "mpirun -np $i ./matrix -m matrix-a matrix-b matrix-m-out-$1"
     mpirun -np $i ./matrix -m matrix-a matrix-b matrix-out-$1
     echo ""
 done
