@@ -173,8 +173,8 @@ matrix_t* matrix_read_mpiio (char* path, process_info_t* pinfo)
     }
 
     /* scan matrix dimensions */
-    MPI_File_read_all(file, &rows, 1, MPI_DOUBLE, MPI_STATUS_IGNORE);
-    MPI_File_read_all(file, &cols, 1, MPI_DOUBLE, MPI_STATUS_IGNORE);
+    MPI_File_read_all(file, &rows, 1, MPI_UINT64_T, MPI_STATUS_IGNORE);
+    MPI_File_read_all(file, &cols, 1, MPI_UINT64_T, MPI_STATUS_IGNORE);
 
     /* initialize matrix struct */
     A->rows = rows;
@@ -182,25 +182,27 @@ matrix_t* matrix_read_mpiio (char* path, process_info_t* pinfo)
     create_partition(&A->row_part, pinfo, rows);
 
     /* create mpi filetype */
-    int sizes[2];
-    int subsizes[2];
-    int starts[2];
-    sizes[0] = (int) A->rows;
-    sizes[1] = (int) A->cols;
-    subsizes[0] = (int) A->row_part.len;
-    subsizes[1] = (int) A->cols;
-    starts[0] = (int) A->row_part.start;
-    starts[1] = 0;
-    if (A->row_part.len > 0)
     {
-        MPI_Type_create_subarray(2, sizes, subsizes, starts, MPI_ORDER_C, MPI_DOUBLE, &doubles_type);
-        MPI_Type_commit(&doubles_type);
-        MPI_File_set_view(file, 2 * sizeof(uint64_t), MPI_DOUBLE, doubles_type, "native", MPI_INFO_NULL);
-    }
-    else
-    {
-        /* empty subarrays are not allowed */
-        MPI_File_set_view(file, 2 * sizeof(uint64_t), MPI_DOUBLE, MPI_DOUBLE, "native", MPI_INFO_NULL);
+        int sizes[2];
+        int subsizes[2];
+        int starts[2];
+        sizes[0] = (int) A->rows;
+        sizes[1] = (int) A->cols;
+        subsizes[0] = (int) A->row_part.len;
+        subsizes[1] = (int) A->cols;
+        starts[0] = (int) A->row_part.start;
+        starts[1] = 0;
+        if (A->row_part.len > 0)
+        {
+            MPI_Type_create_subarray(2, sizes, subsizes, starts, MPI_ORDER_C, MPI_DOUBLE, &doubles_type);
+            MPI_Type_commit(&doubles_type);
+            MPI_File_set_view(file, 2 * sizeof(uint64_t), MPI_DOUBLE, doubles_type, "native", MPI_INFO_NULL);
+        }
+        else
+        {
+            /* empty subarrays are not allowed */
+            MPI_File_set_view(file, 2 * sizeof(uint64_t), MPI_DOUBLE, MPI_DOUBLE, "native", MPI_INFO_NULL);
+        }
     }
 
     /* allocate memory */
@@ -227,6 +229,7 @@ matrix_t* matrix_read_mpiio (char* path, process_info_t* pinfo)
         free(A->m);
         free(A->data);
         free(A);
+        MPI_File_close(&file);
         MPI_Abort(MPI_COMM_WORLD, ret);
     }
 
@@ -308,6 +311,82 @@ matrix_t* matrix_read (char* path, process_info_t* pinfo)
     /* cleanup */
     fclose(file);
     return A;
+}
+
+
+void matrix_write_mpiio (char* path, matrix_t* A, process_info_t* pinfo)
+{
+    int ret;
+    MPI_File file;
+    MPI_Datatype doubles_type;
+
+    /* open file */
+    if ((ret = MPI_File_open(MPI_COMM_WORLD, path,
+                             MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_INFO_NULL,
+                             &file)) != MPI_SUCCESS)
+    {
+        fprintf(stderr, "File opening failed\n");
+        free(A);
+        MPI_Abort(MPI_COMM_WORLD, ret);
+    }
+
+    /* write matrix dimensions */
+    if (pinfo->rank == 0)
+    {
+        if ((ret = MPI_File_write(file, &A->rows, 1, MPI_UINT64_T, MPI_STATUS_IGNORE)) != MPI_SUCCESS)
+        {
+            fprintf(stderr, "File writing failed (rows)\n");
+            MPI_File_close(&file);
+            MPI_Abort(MPI_COMM_WORLD, ret);
+        }
+        if ((ret = MPI_File_write(file, &A->cols, 1, MPI_UINT64_T, MPI_STATUS_IGNORE)) != MPI_SUCCESS)
+        {
+            fprintf(stderr, "File writing failed (cols)\n");
+            MPI_File_close(&file);
+            MPI_Abort(MPI_COMM_WORLD, ret);
+        }
+        if ((ret = MPI_File_seek(file, 0, MPI_SEEK_SET)) != MPI_SUCCESS)
+        {
+            fprintf(stderr, "File seeking failed\n");
+            MPI_File_close(&file);
+            MPI_Abort(MPI_COMM_WORLD, ret);
+        }
+    }
+
+    /* create mpi filetype */
+    {
+        int sizes[2];
+        int subsizes[2];
+        int starts[2];
+        sizes[0] = (int) A->rows;
+        sizes[1] = (int) A->cols;
+        subsizes[0] = (int) A->row_part.len;
+        subsizes[1] = (int) A->cols;
+        starts[0] = (int) A->row_part.start;
+        starts[1] = 0;
+        if (A->row_part.len > 0)
+        {
+            MPI_Type_create_subarray(2, sizes, subsizes, starts, MPI_ORDER_C, MPI_DOUBLE, &doubles_type);
+            MPI_Type_commit(&doubles_type);
+            MPI_File_set_view(file, 2 * sizeof(uint64_t), MPI_DOUBLE, doubles_type, "native", MPI_INFO_NULL);
+        }
+        else
+        {
+            /* empty subarrays are not allowed */
+            MPI_File_set_view(file, 2 * sizeof(uint64_t), MPI_DOUBLE, MPI_DOUBLE, "native", MPI_INFO_NULL);
+        }
+    }
+
+    if ((ret = MPI_File_write_all(file, A->data, (int) (A->row_part.len * A->cols),
+                                  MPI_DOUBLE, MPI_STATUS_IGNORE)) != MPI_SUCCESS)
+    {
+        fprintf(stderr, "File writing failed\n");
+        MPI_File_close(&file);
+        MPI_Abort(MPI_COMM_WORLD, ret);
+    }
+
+    /* cleanup */
+    MPI_File_close(&file);
 }
 
 

@@ -50,6 +50,7 @@ matrix_t* matrix_read_mpiio (char* path, process_info_t* pinfo);
  * Writes matrix to file.
  */
 void matrix_write (char* path, matrix_t* A, process_info_t* pinfo);
+void matrix_write_mpiio (char* path, matrix_t* A, process_info_t* pinfo);
 
 /**
  * Destroys a matrix.

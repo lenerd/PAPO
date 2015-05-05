@@ -32,7 +32,7 @@ int main (int argc, char** argv)
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     create_process_info(&pinfo, size, rank);
 
-    if (argc < 5)
+    if (argc < 3)
     {
         if (rank == 0)
             usage();
@@ -40,28 +40,36 @@ int main (int argc, char** argv)
     }
 
     /* matrix x matrix */
-    if (strcmp(argv[1], "-m") == 0)
+    if (strcmp(argv[1], "-m") == 0 && argc == 5)
     {
         matrix_t* A, * B, * C;
         A = matrix_read_mpiio(argv[2], &pinfo);
         B = matrix_read_mpiio(argv[3], &pinfo);
         C = matrix_dot(A, B, &pinfo);
-        matrix_write(argv[4], C, &pinfo);
+        matrix_write_mpiio(argv[4], C, &pinfo);
         matrix_destroy(A);
         matrix_destroy(B);
         matrix_destroy(C);
     }
     /* matrix x scalar */
-    else if (strcmp(argv[1], "-s") == 0)
+    else if (strcmp(argv[1], "-s") == 0 && argc == 5)
     {
         matrix_t* A, * C;
         double s;
         A = matrix_read_mpiio(argv[2], &pinfo);
-        s = scalar_read(argv[3]);
+        s = scalar_read_mpiio(argv[3]);
         C = matrix_scalar(A, s);
-        matrix_write(argv[4], C, &pinfo);
+        matrix_write_mpiio(argv[4], C, &pinfo);
         matrix_destroy(A);
         matrix_destroy(C);
+    }
+    /* print matrix */
+    else if (strcmp(argv[1], "-p") == 0 && argc == 3)
+    {
+        matrix_t* A;
+        A = matrix_read_mpiio(argv[2], &pinfo);
+        matrix_print(A, &pinfo);
+        matrix_destroy(A);
     }
     else
     {
@@ -96,4 +104,6 @@ void usage (void)
     printf("    matrix -m file_A file_B file_AxB\n");
     printf("Matrix scalar multiplication\n");
     printf("    matrix -s file_A file_s file_Axs\n");
+    printf("Matrix printing\n");
+    printf("    matrix -p file_A\n");
 }

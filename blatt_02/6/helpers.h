@@ -65,6 +65,7 @@ uint64_t skip_lines (FILE* f, uint64_t lines);
  * Reads a scalar value from a file.
  */
 double scalar_read (char* path);
+double scalar_read_mpiio (char* path);
 
 
 /**

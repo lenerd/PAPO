@@ -1,5 +1,6 @@
 #include "helpers.h"
 
+#include <mpi.h>
 #include <stdio.h>
 
 
@@ -72,6 +73,32 @@ uint64_t skip_lines (FILE* file, uint64_t lines)
             ++cnt;
     }
     return cnt;
+}
+
+
+double scalar_read_mpiio (char* path)
+{
+    MPI_File file;
+    int ret;
+    double s;
+
+    /* open file */
+    if ((ret = MPI_File_open(MPI_COMM_WORLD, path, MPI_MODE_RDONLY, MPI_INFO_NULL, &file)) != MPI_SUCCESS)
+    {
+        fprintf(stderr, "File opening failed\n");
+        MPI_Abort(MPI_COMM_WORLD, ret);
+    }
+
+    if ((ret = MPI_File_read_all(file, &s, 1, MPI_DOUBLE, MPI_STATUS_IGNORE)) != MPI_SUCCESS)
+    {
+        fprintf(stderr, "File reading failed\n");
+        MPI_File_close(&file);
+        MPI_Abort(MPI_COMM_WORLD, ret);
+    }
+
+    /* cleanup */
+    MPI_File_close(&file);
+    return s;
 }
 
 
