@@ -117,7 +117,8 @@ void time_difference (struct timespec* src_a, struct timespec* src_b, struct tim
         --dst->tv_sec;
         dst->tv_nsec = 1000000000;
     }
-    dst->tv_nsec -= src_a->tv_nsec - src_b->tv_nsec;
+    dst->tv_nsec += src_a->tv_nsec;
+    dst->tv_nsec -= src_b->tv_nsec;
     if (dst->tv_nsec >= 1000000000)
     {
         ++dst->tv_sec;
