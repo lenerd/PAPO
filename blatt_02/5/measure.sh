@@ -4,7 +4,7 @@
 #SBATCH --error measurement-%A.err
 #SBATCH --output measurement-%A.out
 
-echo "matrix-scalar multiplacation"
+echo "matrix-scalar multiplication"
 for i in 1 2 4 8 16
 do
     echo "$i processes"
@@ -12,7 +12,7 @@ do
     echo ""
 done
 
-echo "matrix-matrix multiplacation"
+echo "matrix-matrix multiplication"
 for i in 1 2 4 8 16
 do
     echo "$i processes"
