@@ -54,7 +54,7 @@ int main (int argc, char** argv)
     else if (strcmp(argv[1], "-s") == 0)
     {
         matrix_t* A, * C;
-        int64_t s;
+        double s;
         A = matrix_read(argv[2], &pinfo);
         s = scalar_read(argv[3]);
         C = matrix_scalar(A, s);
