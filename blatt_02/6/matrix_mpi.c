@@ -1,0 +1,429 @@
+#include "matrix_mpi.h"
+#include "helpers.h"
+
+#include <assert.h>
+#include <mpi.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+
+matrix_t* matrix_scalar (matrix_t* A, double s)
+{
+    matrix_t* C;
+    C = matrix_copy(A);
+    for (uint64_t i = C->row_part.start; i < C->row_part.end; ++i)
+    {
+        for (uint64_t j = 0; j < C->cols; ++j)
+        {
+            C->m[i][j] *= s;
+        }
+    }
+    return C;
+}
+
+
+matrix_t* matrix_dot (matrix_t* A, matrix_t* B, process_info_t* pinfo)
+{
+    /* requirement for matrix multiplication */
+    assert(A->cols == B->rows);
+
+    matrix_t* C, * T;
+
+    /* result matrix */
+    C = matrix_create(A->rows, B->cols, pinfo);
+
+    /* calc with local part of B */
+    for (uint64_t i = A->row_part.start; i < A->row_part.end; ++i)
+        for (uint64_t k = B->row_part.start; k < B->row_part.end; ++k)
+            for (uint64_t j = 0; j < B->cols; ++j)
+                C->m[i][j] += A->m[i][k] * B->m[k][j];
+
+    /* temp matrix */
+    T = matrix_copy(B);
+
+    for (int i = 0; i < pinfo->size - 1; ++i)
+    {
+        int rank_from, rank_to;
+        rank_from = (pinfo->rank - 1 + pinfo->size) % pinfo->size;
+        rank_to = (pinfo->rank + 1) % pinfo->size;
+
+        /* shift matrix part */
+        MPI_Sendrecv_replace(T->data, (int) (T->row_part.max_len * T->cols), MPI_DOUBLE,
+                             rank_from, 0, rank_to, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        /* shift meta data */
+        MPI_Sendrecv_replace(&T->row_part, 4, MPI_UINT64_T,
+                             rank_from, 0, rank_to, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+        /* reset row pointers */
+        memset(T->m, 0, T->rows * sizeof(double*));
+        /* calculate new row pointers */
+        for (uint64_t i = T->row_part.start; i < T->row_part.end; ++i)
+            T->m[i] = T->data + (i - T->row_part.start) * T->cols;
+
+        /* calculate part with next sub matrix */
+        for (uint64_t i = A->row_part.start; i < A->row_part.end; ++i)
+            for (uint64_t k = T->row_part.start; k < T->row_part.end; ++k)
+                for (uint64_t j = 0; j < B->cols; ++j)
+                    C->m[i][j] += A->m[i][k] * T->m[k][j];
+    }
+    matrix_destroy(T);
+    return C;
+}
+
+
+matrix_t* matrix_copy (matrix_t* A)
+{
+    matrix_t* B;
+
+    /* allocate memory for matrix_t struct */
+    B = (matrix_t*) malloc(sizeof(matrix_t));
+    if (B == NULL)
+    {
+        fprintf(stderr, "memory allocation failed\n");
+        return NULL;
+    }
+    memcpy((void*) B, (void*) A, sizeof(matrix_t));
+
+    /* initialize matrix struct */
+    memcpy((void*) &B->row_part, (void*) &A->row_part, sizeof(partition_t));
+    B->rows = A->rows;
+    B->cols = A->cols;
+
+    /* allocate memory */
+    B->data = calloc(B->row_part.max_len *  B->cols, sizeof(double));
+    B->m = calloc(B->rows, sizeof(double*));
+    if (B->data == NULL || B->m == NULL)
+    {
+        fprintf(stderr, "memory allocation failed\n");
+        free(B);
+        return NULL;
+    }
+    memcpy((void*) B->data, (void*) A->data, B->row_part.max_len * B->cols * sizeof(double));
+
+    /* initialize row pointers */
+    for (uint64_t i = B->row_part.start; i < B->row_part.end; ++i)
+    {
+        B->m[i] = B->data + (i - B->row_part.start) * B->cols;
+    }
+    return B;
+}
+
+
+matrix_t* matrix_create (uint64_t rows, uint64_t cols, process_info_t* pinfo)
+{
+    matrix_t* A;
+
+    /* allocate memory for matrix_t struct */
+    A = (matrix_t*) malloc(sizeof(matrix_t));
+    if (A == NULL)
+    {
+        fprintf(stderr, "memory allocation failed\n");
+        return NULL;
+    }
+
+    /* initialize matrix struct */
+    create_partition(&A->row_part, pinfo, rows);
+    A->rows = rows;
+    A->cols = cols;
+
+    /* allocate memory */
+    A->data = calloc(A->row_part.max_len *  cols, sizeof(double));
+    A->m = calloc(rows, sizeof(double*));
+    if (A->data == NULL || A->m == NULL)
+    {
+        fprintf(stderr, "memory allocation failed\n");
+        free(A);
+        return NULL;
+    }
+
+    /* initialize row pointers */
+    for (uint64_t i = A->row_part.start; i < A->row_part.end; ++i)
+    {
+        A->m[i] = A->data + (i - A->row_part.start) * cols;
+    }
+    return A;
+}
+
+
+matrix_t* matrix_read_mpiio (char* path, process_info_t* pinfo)
+{
+    matrix_t* A;
+    uint64_t rows, cols;
+    int ret;
+    MPI_File file;
+    MPI_Datatype doubles_type;
+
+    /* allocate memory for matrix_t struct */
+    A = (matrix_t*) malloc(sizeof(matrix_t));
+    if (A == NULL)
+    {
+        fprintf(stderr, "memory allocation failed\n");
+        return NULL;
+    }
+
+    /* open file */
+    if ((ret = MPI_File_open(MPI_COMM_WORLD, path, MPI_MODE_RDONLY, MPI_INFO_NULL, &file)) != MPI_SUCCESS)
+    {
+        fprintf(stderr, "File opening failed\n");
+        free(A);
+        MPI_Abort(MPI_COMM_WORLD, ret);
+    }
+
+    /* scan matrix dimensions */
+    MPI_File_read_all(file, &rows, 1, MPI_DOUBLE, MPI_STATUS_IGNORE);
+    MPI_File_read_all(file, &cols, 1, MPI_DOUBLE, MPI_STATUS_IGNORE);
+
+    /* initialize matrix struct */
+    A->rows = rows;
+    A->cols = cols;
+    create_partition(&A->row_part, pinfo, rows);
+
+    /* create mpi filetype */
+    int sizes[2];
+    int subsizes[2];
+    int starts[2];
+    sizes[0] = (int) A->rows;
+    sizes[1] = (int) A->cols;
+    subsizes[0] = (int) A->row_part.len;
+    subsizes[1] = (int) A->cols;
+    starts[0] = (int) A->row_part.start;
+    starts[1] = 0;
+    if (A->row_part.len > 0)
+    {
+        MPI_Type_create_subarray(2, sizes, subsizes, starts, MPI_ORDER_C, MPI_DOUBLE, &doubles_type);
+        MPI_Type_commit(&doubles_type);
+        MPI_File_set_view(file, 2 * sizeof(uint64_t), MPI_DOUBLE, doubles_type, "native", MPI_INFO_NULL);
+    }
+    else
+    {
+        /* empty subarrays are not allowed */
+        MPI_File_set_view(file, 2 * sizeof(uint64_t), MPI_DOUBLE, MPI_DOUBLE, "native", MPI_INFO_NULL);
+    }
+
+    /* allocate memory */
+    A->data = calloc(A->row_part.max_len * cols, sizeof(double));
+    A->m = calloc(rows, sizeof(double*));
+    if (A->data == NULL || A->m == NULL)
+    {
+        fprintf(stderr, "memory allocation failed\n");
+        MPI_File_close(&file);
+        free(A);
+        return NULL;
+    }
+
+    /* initialize row pointer */
+    for (uint64_t i = A->row_part.start; i < A->row_part.end; ++i)
+    {
+        A->m[i] = A->data + (i - A->row_part.start) * cols;
+    }
+
+    if ((ret = MPI_File_read_all(file, A->data, (int) (A->row_part.len * A->cols),
+                                 MPI_DOUBLE, MPI_STATUS_IGNORE)) != MPI_SUCCESS)
+    {
+        fprintf(stderr, "File reading failed\n");
+        free(A->m);
+        free(A->data);
+        free(A);
+        MPI_Abort(MPI_COMM_WORLD, ret);
+    }
+
+    /* cleanup */
+    MPI_File_close(&file);
+    return A;
+}
+
+
+matrix_t* matrix_read (char* path, process_info_t* pinfo)
+{
+    matrix_t* A;
+    uint64_t rows, cols;
+    FILE* file;
+
+    /* allocate memory for matrix_t struct */
+    A = (matrix_t*) malloc(sizeof(matrix_t));
+    if (A == NULL)
+    {
+        fprintf(stderr, "memory allocation failed\n");
+        return NULL;
+    }
+
+    /* open file */
+    file = fopen(path, "r");
+    if (!file)
+    {
+        perror("File opening failed\n");
+        free(A);
+        return NULL;
+    }
+
+    /* scan matrix dimensions */
+    rows = count_rows(file);
+    cols = count_cols(file);
+
+    /* initialize matrix struct */
+    A->rows = rows;
+    A->cols = cols;
+    create_partition(&A->row_part, pinfo, rows);
+
+    /* allocate memory */
+    A->data = calloc(A->row_part.max_len * cols, sizeof(double));
+    A->m = calloc(rows, sizeof(double*));
+    if (A->data == NULL || A->m == NULL)
+    {
+        fprintf(stderr, "memory allocation failed\n");
+        fclose(file);
+        free(A);
+        return NULL;
+    }
+
+    /* initialize row pointer */
+    for (uint64_t i = A->row_part.start; i < A->row_part.end; ++i)
+    {
+        A->m[i] = A->data + (i - A->row_part.start) * cols;
+    }
+
+    /* skip offset to local part */
+    skip_lines(file, A->row_part.start);
+
+    /* read rows of local part */
+    for (uint64_t i = A->row_part.start; i < A->row_part.end; ++i)
+    {
+        for (uint64_t j = 0; j < cols; ++j)
+        {
+            if (fscanf(file, "%lf", &A->m[i][j]) != 1)
+            {
+                fprintf(stderr, "invalid file\n");
+                fclose(file);
+                free(A->m);
+                free(A->data);
+                free(A);
+                return NULL;
+            }
+        }
+    }
+
+    /* cleanup */
+    fclose(file);
+    return A;
+}
+
+
+void matrix_write (char* path, matrix_t* A, process_info_t* pinfo)
+{
+    FILE* file = NULL;
+    int state = -1;
+
+    if (pinfo->rank == 0)
+    {
+        /* creating file */
+        file = fopen(path, "w");
+        if (file == NULL)
+        {
+            perror("File opening failed\n");
+            state = -1;
+            if (pinfo->size > 1)
+            {
+                MPI_Send(&state, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
+            }
+            return;
+        }
+    }
+    else /* pinfo->rank != 0 */
+    {
+        /* wait for last process */
+        MPI_Recv(&state, 1, MPI_INT, pinfo->rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        if (state < 0)
+        {
+            fprintf(stderr, "recv: error writing to file\n");
+            if (pinfo->rank < pinfo->size - 1)
+            {
+                MPI_Send(&state, 1, MPI_INT, pinfo->rank + 1, 0, MPI_COMM_WORLD);
+            }
+            return;
+        }
+        /* appending to file file */
+        file = fopen(path, "a");
+        if (file == NULL)
+        {
+            perror("File opening failed\n");
+            state = -1;
+            if (pinfo->size > 1)
+            {
+                MPI_Send(&state, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
+            }
+            return;
+        }
+    }
+    /* writing local part */
+    for (uint64_t i = A->row_part.start; i < A->row_part.end; ++i)
+    {
+        for (uint64_t j = 0; j < A->cols; ++j)
+        {
+            if ((state = fprintf(file, "%.3lf ", A->m[i][j])) < 0)
+            {
+                fprintf(stderr, "error writing to file\n");
+                fclose(file);
+                if (pinfo->rank < pinfo->size - 1)
+                {
+                    MPI_Send(&state, 1, MPI_INT, pinfo->rank + 1, 0, MPI_COMM_WORLD);
+                }
+                return;
+            }
+        }
+        if ((state = fprintf(file, "\n")) < 0)
+        {
+            fprintf(stderr, "error writing to file\n");
+            fclose(file);
+            if (pinfo->rank < pinfo->size - 1)
+            {
+                MPI_Send(&state, 1, MPI_INT, pinfo->rank + 1, 0, MPI_COMM_WORLD);
+            }
+            return;
+        }
+    }
+    fclose(file);
+    /* tell next process to go on */
+    if (pinfo->rank != pinfo->size - 1)
+    {
+        MPI_Send(&state, 1, MPI_INT, pinfo->rank + 1, 0, MPI_COMM_WORLD);
+    }
+}
+
+
+void matrix_destroy (matrix_t* A)
+{
+    free(A->m);
+    free(A->data);
+    free(A);
+}
+
+
+void matrix_print (matrix_t* A, process_info_t* pinfo)
+{
+    /* print header */
+    if (pinfo->rank == 0)
+    {
+        printf("[Matrix: %lu x %lu]\n", A->rows, A->cols);
+    }
+    /* wait for last process */
+    if (pinfo->rank > 0)
+    {
+        MPI_Recv(NULL, 0, MPI_C_BOOL, pinfo->rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    }
+    /* print local part */
+    for (uint64_t i = A->row_part.start; i < A->row_part.end; ++i)
+    {
+        for (uint64_t j = 0; j < A->cols; ++j)
+            printf("%lf ", A->m[i][j]);
+        printf("\n");
+    }
+    /* tell next process to go on */
+    if (pinfo->rank < pinfo->size - 1)
+    {
+        MPI_Send(NULL, 0, MPI_C_BOOL, pinfo->rank + 1, 0, MPI_COMM_WORLD);
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+}
