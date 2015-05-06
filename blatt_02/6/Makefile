@@ -1,5 +1,5 @@
 CC=mpicc
-CFLAGS=-std=c11 -Wall -Wextra -Wconversion -pedantic -O0 -ggdb
+CFLAGS=-std=c11 -Wall -Wextra -Wconversion -pedantic -O3
 LFLAGS=-lrt
 
 .PHONY: all clean
