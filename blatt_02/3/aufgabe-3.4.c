@@ -25,7 +25,7 @@ int main (int argc, char** argv)
     if (P == 1)  /* nothing to do alone */
         return EXIT_FAILURE;
     if (argc > 1)
-        order = atoi(argv[1]) % 4;
+        order = (uint8_t) atoi(argv[1]) % 4;
 
     if (rank < 2)
     {
