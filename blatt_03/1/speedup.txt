@@ -1,0 +1,9 @@
+Zunächst steigt der Speedup linear mit der Prozesszahl an (Faktor ca. 3/4). Bei
+fünf Prozessen macht der Speedup einen Sprung nach oben. Eventuell wird der
+Cache durch die geringere Datenmenge pro Prozess besser ausgenutzt. Bis zehn
+Prozesse bleibt der Speedup auf ungefähr dem gleichen Niveau, dann fällt er
+jedoch deutlich ab. Wahrscheinlich überwiegt ab diesem Zeitpunkt der Aufwand für
+die Kommunikation die Vorteile der parallelen Berechnung.
+Das Effizienzdiagramm spiegelt obiges ähnlich wieder. Die Effizienz fällt mit
+steigender Anzahl an Prozessen mit der Ausnahme, dass sie bei fünf Prozessen
+einen Sprung nach oben schafft.
