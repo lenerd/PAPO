@@ -1,0 +1,28 @@
+# SAT-Solver
+
+## Problem
+SAT ist kurz für das boolean satifiability problem, das Erfüllbarkeitsproblem
+der Aussagenlogik. Gegeben eine aussagenlogische Formel in konjunktiver
+Normalform, so soll entschieden werden, ob eine Belegung der Variablen
+existiert, für welche die Formel wahr wird, oder nicht.
+SAT ist NP-vollständig und kann nicht in polynomieller Zeit auf
+deterministischen Turingmaschinen und äquivalenten Maschinen gelöst werden
+(angenommen es gelte P != NP).
+
+
+## Lösungsansatz
+Der Suchraum kann als Baum angesehen werden, wobei jede Verzweigung der
+Zuweisung eines Wahrheitswertes einer Variablen angesehen werden kann.
+Algorithmen wie der DPLL-Algorithmus (Davis–Putnam–Logemann–Loveland Alg.)
+vereinfachen eine gegebene KNF und rufen sich zweimal rekursiv mit Formeln auf,
+in denen einer Variable der Wert wahr bzw. falsch zugewiesen wird.
+
+Eine Idee für die parallele Implementierung mittels Nachrichtenaustausch ist die
+folgende: Ein Masterprozess verteilt aus einem Pool Formeln, welche Knoten in
+dem Suchbaum repräsentieren, an die anderen Prozesse. Jeder Prozess berechnet
+einen Teilbaum mit bestimmter Höhe ausgehend von dieser Formel und schickt
+dessen Blätter zurück an den Masterprozess, sofern eine Erfüllbarkeit in diesem
+Schritt noch möglich ist.
+Ob die Parallelisierung in dieser Form effizient möglich ist, müsste ausprobiert
+werden. Wie eine Visualisierung aussehen könnte ist, weiß ich bisher ebenfalls
+noch nicht.
