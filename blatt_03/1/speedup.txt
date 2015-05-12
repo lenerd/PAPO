@@ -1,3 +1,6 @@
+Die Messwerte sind in der Datei speedup-87857.out zu finden, welche durch
+speedup.sh im Batch-Betrieb erstellt wurde.
+
 Zunächst steigt der Speedup linear mit der Prozesszahl an (Faktor ca. 3/4). Bei
 fünf Prozessen macht der Speedup einen Sprung nach oben. Eventuell wird der
 Cache durch die geringere Datenmenge pro Prozess besser ausgenutzt. Bis zehn
