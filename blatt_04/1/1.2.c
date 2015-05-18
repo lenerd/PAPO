@@ -1,6 +1,7 @@
 #define _POSIX_C_SOURCE 199309L
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <time.h>
 #include <omp.h>
 #include "time_difference.h"
@@ -8,8 +9,8 @@
 
 int main (int argc, char** argv)
 {
-    int sum = 0;
-    int local_sum = 0;
+    int64_t sum = 0;
+    int64_t local_sum = 0;
     struct timespec start, end, diff;
 
     clock_gettime(CLOCK_REALTIME, &start);
@@ -28,7 +29,7 @@ int main (int argc, char** argv)
 
     time_difference(&start, &end, &diff);
 
-    printf("sum = %d\n", sum);
+    printf("sum = %ld\n", sum);
     printf("t = %ld,%09ld\n", diff.tv_sec, diff.tv_nsec);
 
     return EXIT_SUCCESS;
