@@ -9,12 +9,12 @@
 int main (int argc, char** argv)
 {
     int sum = 0;
-    struct timespec start, end, diff;
     int local_sum = 0;
+    struct timespec start, end, diff;
 
     clock_gettime(CLOCK_REALTIME, &start);
 
-    #pragma omp parallel private(local_sum)
+    #pragma omp parallel firstprivate(local_sum)
     {
         #pragma omp for
         for (int i = 1; i < argc; ++i)

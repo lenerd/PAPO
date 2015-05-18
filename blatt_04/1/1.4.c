@@ -14,7 +14,7 @@ int main (int argc, char** argv)
 
     clock_gettime(CLOCK_REALTIME, &start);
 
-    #pragma omp parallel private(local_sum)
+    #pragma omp parallel firstprivate(local_sum)
     {
         #pragma omp for
         for (int i = 1; i < argc; ++i)
