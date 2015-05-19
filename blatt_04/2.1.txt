@@ -1,0 +1,233 @@
+Aufruf:
+$ export OMP_NUM_THREADS=2
+$ operf ./1.2.out $(seq 1 300000)
+
+
+Counted CPU_CLK_UNHALTED events (Clock cycles when not halted) with a unit mask of 0x00 (No unit mask) count 100000
+CPU_CLK_UNHALT...|
+  samples|      %|
+------------------
+      854 100.000 operf
+	CPU_CLK_UNHALT...|
+	  samples|      %|
+	------------------
+	      501 58.6651 no-vmlinux            <- Kernel
+	      297 34.7775 libc-2.21.so          <- C Standard Library
+	       38  4.4496 1.2.out               <- mein Programm
+	       15  1.7564 libgomp.so.1.0.0      <- OpenMP Library
+	        2  0.2342 ld-2.21.so            <- dynamic Linker
+	        1  0.1171 libpthread-2.21.so    <- POSIX Threads Library
+
+
+CPU: Intel Ivy Bridge microarchitecture, speed 3600 MHz (estimated)
+Counted CPU_CLK_UNHALTED events (Clock cycles when not halted) with a unit mask of 0x00 (No unit mask) count 100000
+samples  %        image name               symbol name
+501      58.7339  no-vmlinux               /no-vmlinux                  <- Kernel
+288      33.7632  libc-2.21.so             __GI_____strtoll_l_internal  <- string to integer
+38        4.4549  1.2.out                  main._omp_fn.0               <- main
+11        1.2896  libgomp.so.1.0.0         gomp_team_barrier_wait_end   <- OpenMP
+7         0.8206  libc-2.21.so             strtoll                      <- string to integer
+4         0.4689  libgomp.so.1.0.0         gomp_barrier_wait_end        <- OpenMP
+1         0.1172  ld-2.21.so               _dl_lookup_symbol_x          <- dynamic linker
+1         0.1172  ld-2.21.so               match_symbol                 <- dynamic linker
+1         0.1172  libc-2.21.so             _dl_addr                     <- C Stanard Library
+1         0.1172  libc-2.21.so             getenv                       <- C Stanard Library (OpenMP read environment variable)
+
+
+/* 
+ * Command line: opannotate --source -t 10 1.2.out 
+ * 
+ * Interpretation of command line:
+ * Output annotated source file with samples
+ * Output files where samples count reach 10% of the samples
+ * 
+ * CPU: Intel Ivy Bridge microarchitecture, speed 3600 MHz (estimated)
+ * Counted CPU_CLK_UNHALTED events (Clock cycles when not halted) with a unit mask of 0x00 (No unit mask) count 100000
+ */
+/* 
+ * Total samples for file : "/usr/include/stdlib.h"
+ * 
+ *     31 81.5789
+ */
+...
+               :#ifdef __USE_EXTERN_INLINES
+               :__BEGIN_NAMESPACE_STD
+               :__extern_inline int
+               :__NTH (atoi (const char *__nptr))
+               :{
+    31 81.5789 :  return (int) strtol (__nptr, (char **) NULL, 10);
+               :}
+               :__extern_inline long int
+               :__NTH (atol (const char *__nptr))
+               :{
+               :  return strtol (__nptr, (char **) NULL, 10);
+               :}
+               :__END_NAMESPACE_STD
+               :
+               :# ifdef __USE_ISOC99
+               :__BEGIN_NAMESPACE_C99
+               :__extension__ __extern_inline long long int
+               :__NTH (atoll (const char *__nptr))
+               :{
+               :  return strtoll (__nptr, (char **) NULL, 10);
+               :}
+               :__END_NAMESPACE_C99
+               :# endif
+               :#endif /* Optimizing and Inlining.  */
+...
+
+/* 
+ * Total samples for file : "/home/lennart/uni/PAPO/abgaben/blatt_04/1/1.2.c"
+ * 
+ *      7 18.4211
+ */
+
+
+               :#define _POSIX_C_SOURCE 199309L
+               :#include <stdlib.h>
+               :#include <stdio.h>
+               :#include <stdint.h>
+               :#include <time.h>
+               :#include <omp.h>
+               :#include "time_difference.h"
+               :
+               :
+               :int main (int argc, char** argv)
+               :{
+               :    int64_t sum = 0;
+               :    int64_t local_sum = 0;
+               :    struct timespec start, end, diff;
+               :
+               :    clock_gettime(CLOCK_REALTIME, &start);
+               :
+               :    #pragma omp parallel firstprivate(local_sum) /* main._omp_fn.0 total:     38 100.000 */
+               :    {
+               :        #pragma omp for
+               :        for (int i = 1; i < argc; ++i)
+     7 18.4211 :            local_sum += atoi(argv[i]);
+               :
+               :        #pragma omp critical
+               :        sum += local_sum;
+               :    }
+               :
+               :    clock_gettime(CLOCK_REALTIME, &end);
+               :
+               :    time_difference(&start, &end, &diff);
+               :
+               :    printf("sum = %ld\n", sum);
+               :    printf("t = %ld,%09ld\n", diff.tv_sec, diff.tv_nsec);
+               :
+               :    return EXIT_SUCCESS;
+               :}
+
+
+Offenbar verbraucht das Umwandeln der übergebenen Parameter in Integer nach dem Kernel die meisten Taktzyklen.
+
+
+Aufruf:
+$ export OMP_NUM_THREADS=2
+$ operf -e INST_RETIRED::200000:1:1 ./1.2.out $(seq 1 300000)
+
+
+CPU: Intel Ivy Bridge microarchitecture, speed 3600 MHz (estimated)
+Counted INST_RETIRED events (number of instructions retired) with a unit mask of 0x01 (multiple flags) count 200000
+INST_RETIRED:2...|
+  samples|      %|
+------------------
+      822 100.000 operf
+	INST_RETIRED:2...|
+	  samples|      %|
+	------------------
+	      469 57.0560 no-vmlinux
+	      311 37.8345 libc-2.21.so
+	       21  2.5547 1.2.out
+	       20  2.4331 libgomp.so.1.0.0
+	        1  0.1217 ld-2.21.so
+
+/* 
+ * Command line: opannotate --source -t 10 1.2.out 
+ * 
+ * Interpretation of command line:
+ * Output annotated source file with samples
+ * Output files where samples count reach 10% of the samples
+ * 
+ * CPU: Intel Ivy Bridge microarchitecture, speed 3600 MHz (estimated)
+ * Counted INST_RETIRED events (number of instructions retired) with a unit mask of 0x01 (multiple flags) count 200000
+ */
+/* 
+ * Total samples for file : "/usr/include/stdlib.h"
+ * 
+ *     13 61.9048
+ */
+
+
+...
+               :#ifdef __USE_EXTERN_INLINES
+               :__BEGIN_NAMESPACE_STD
+               :__extern_inline int
+               :__NTH (atoi (const char *__nptr))
+               :{
+    13 61.9048 :  return (int) strtol (__nptr, (char **) NULL, 10);
+               :}
+               :__extern_inline long int
+               :__NTH (atol (const char *__nptr))
+               :{
+               :  return strtol (__nptr, (char **) NULL, 10);
+               :}
+               :__END_NAMESPACE_STD
+               :
+               :# ifdef __USE_ISOC99
+               :__BEGIN_NAMESPACE_C99
+               :__extension__ __extern_inline long long int
+               :__NTH (atoll (const char *__nptr))
+               :{
+               :  return strtoll (__nptr, (char **) NULL, 10);
+               :}
+               :__END_NAMESPACE_C99
+               :# endif
+               :#endif /* Optimizing and Inlining.  */
+...
+
+/* 
+ * Total samples for file : "/home/lennart/uni/PAPO/abgaben/blatt_04/1/1.2.c"
+ * 
+ *      8 38.0952
+ */
+
+
+               :#define _POSIX_C_SOURCE 199309L
+               :#include <stdlib.h>
+               :#include <stdio.h>
+               :#include <stdint.h>
+               :#include <time.h>
+               :#include <omp.h>
+               :#include "time_difference.h"
+               :
+               :
+               :int main (int argc, char** argv)
+               :{
+               :    int64_t sum = 0;
+               :    int64_t local_sum = 0;
+               :    struct timespec start, end, diff;
+               :
+               :    clock_gettime(CLOCK_REALTIME, &start);
+               :
+               :    #pragma omp parallel firstprivate(local_sum) /* main._omp_fn.0 total:     21 100.000 */
+               :    {
+               :        #pragma omp for
+               :        for (int i = 1; i < argc; ++i)
+     8 38.0952 :            local_sum += atoi(argv[i]);
+               :
+               :        #pragma omp critical
+               :        sum += local_sum;
+               :    }
+               :
+               :    clock_gettime(CLOCK_REALTIME, &end);
+               :
+               :    time_difference(&start, &end, &diff);
+               :
+               :    printf("sum = %ld\n", sum);
+               :    printf("t = %ld,%09ld\n", diff.tv_sec, diff.tv_nsec);
+               :
+               :    return EXIT_SUCCESS;
+               :}

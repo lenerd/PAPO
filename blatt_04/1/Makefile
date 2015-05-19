@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-std=c11 -Wall -Wextra -pedantic -Wconversion -fopenmp -O0 -ggdb
+CFLAGS=-std=c11 -Wall -Wextra -pedantic -Wconversion -fopenmp -O3 -ggdb
 
 .PHONY: all clean
 
