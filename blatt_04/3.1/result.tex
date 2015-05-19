@@ -1,0 +1,168 @@
+\documentclass[a4paper,10pt]{article}
+\nonstopmode
+\usepackage{amssymb}
+\usepackage{longtable}
+\usepackage{ifthen}
+\usepackage{pgfplots}
+\usepackage[linkcolor=red,pagecolor=red,pdfborder={1 1 1}]{hyperref}
+\pgfplotsset{compat=1.4}
+
+\textwidth=16.1cm \textheight=27.0cm \topmargin=-1.8cm
+\oddsidemargin=0.1cm \evensidemargin=0.1cm \footskip=45pt
+
+\begin{document}
+
+\pgfplotsset{
+/pgfplots/log number format basis/.code 2 args={
+  \ifdim #1 pt=2pt
+    \ifdim #2 pt>0.5pt
+      \ifdim #2 pt<10pt
+        \pgfmathparse{#1^#2}
+        \pgfmathtruncatemacro\r{\pgfmathresult} \r 
+      \else
+        \ifdim #2 pt<20pt
+          \pgfmathparse{#1^(#2 - 10)}
+          \pgfmathprintnumber{\pgfmathresult}K
+        \else
+          \ifdim #2 pt<30pt
+            \pgfmathparse{#1^(#2 - 20)}
+            \pgfmathprintnumber{\pgfmathresult}M
+          \else
+            \ifdim #2 pt<40pt
+              \pgfmathparse{#1^(#2 - 30)}
+              \pgfmathprintnumber{\pgfmathresult}G
+            \else
+              \ifdim #2 pt<50pt
+                \pgfmathparse{#1^(#2 - 40)}
+                \pgfmathprintnumber{\pgfmathresult}T
+              \else
+                \ifdim #2 pt<60pt
+                  \pgfmathparse{#1^(#2 - 50)}
+                  \pgfmathprintnumber{\pgfmathresult}P
+                \else
+                  \ifdim #2 pt<70pt
+                    \pgfmathparse{#1^(#2 - 60)}
+                    \pgfmathprintnumber{\pgfmathresult}E
+                  \else
+                    >1Z
+                  \fi
+                \fi
+              \fi
+            \fi
+          \fi
+        \fi
+      \fi
+    \fi
+  \fi
+  \ifdim #1 pt=10pt
+    $#1^{\pgfmathprintnumber{#2}}$
+  \fi
+}}
+
+\begin{titlepage}\thispagestyle{empty}
+\begin{huge}\begin{flushleft}\bf{OTF Profile}\end{flushleft}\end{huge}
+\hrule
+\begin{flushright}\textbf{\large Trace Properties}\end{flushright}
+\vspace{0.5\baselineskip}
+\begin{flushleft}
+\begin{tabular}{ll}
+\bf{OTF Version:} & \verb|1.12.4salmon| \\
+\bf{Creator:} & \verb|VampirTrace 5.14.4|\\
+\bf{File:} & \verb|1.2.otf|
+\end{tabular}
+
+\vspace{1\baselineskip}
+\begin{tabular}{ll}
+\bf{Number of Processes:} & \verb|12|\\
+\bf{Timer Resolution:} & \verb|2.66684 GHz|
+\end{tabular}
+
+\vspace{1\baselineskip}
+\begin{tabular}{l}\bf{Comments:}\end{tabular}
+\begin{quote}\begin{verbatim}
+Trace Times:
+ Start: Tue May 19 21:12:41 2015 (1432062761196787)
+ Stop: Tue May 19 21:12:41 2015 (1432062761204341)
+ Elapsed: 00:00:00 (7554)
+VampirTrace Environment:
+ VT_MODE: TRACE
+ VT_BUFFER_SIZE: 32M
+ VT_SYNC_FLUSH: no
+ VT_SYNC_FLUSH_LEVEL: 80
+ VT_SNAPSHOTS: yes
+ VT_MAX_SNAPSHOTS: 1024
+ VT_ONOFF_CHECK_STACK_BALANCE: yes
+ VT_MAX_STACK_DEPTH: 0
+ VT_MAX_FLUSHES: 1
+ VT_METRICS: <not set>
+ VT_METRICS_SEP: :
+ VT_RUSAGE: <not set>
+ VT_CPUIDTRACE: no
+ VT_EXECTRACE: yes
+ VT_IOTRACE: no
+ VT_IOTRACE_EXTENDED: no
+ VT_PTHREAD_REUSE: yes
+ VT_FILTER_SPEC: <not set>
+ VT_GROUPS_SPEC: <not set>
+\end{verbatim}\end{quote}
+\end{flushleft}
+\vspace*{\fill}
+\begin{flushright}\today\end{flushright}
+\end{titlepage}
+
+\newpage
+
+\begin{center}\small
+{\Large \bf Top 9 of 9 Functions}
+\bigskip
+\begin{longtable}{|l||r|r|r|}
+
+   \hline
+   \bf Function & \bf invocations[\#] & \bf excl. time[sec] $\nabla$ & \bf incl. time[sec] \\
+   \hline\hline
+  \verb|!$omp for @1.2.c:20| &   \verb|12| &   \verb|0.0128062| &   \verb|0.0139053| \\
+  \verb|main| &   \verb|1| &   \verb|0.00143556| &   \verb|0.00261997| \\
+  \verb|!$omp ibarrier @1.2.c:22| &   \verb|12| &   \verb|0.00109911| &   \verb|0.00109911| \\
+      \hline
+  \verb|!$omp critical @1.2.c:24| &   \verb|12| &   \verb|7.01039e-05| &   \verb|7.15213e-05| \\
+  \verb|!$omp ibarrier @1.2.c:26| &   \verb|12| &   \verb|5.11392e-05| &   \verb|5.11392e-05| \\
+  \verb|!$omp parallel @1.2.c:18| &   \verb|12| &   \verb|1.74319e-05| &   \verb|0.0140454| \\
+      \hline
+  \verb|parallel region| &   \verb|1| &   \verb|8.21946e-06| &   \verb|0.0011794| \\
+  \verb|time_difference| &   \verb|1| &   \verb|5.00742e-06| &   \verb|5.00742e-06| \\
+  \verb|!$omp critical sblock @1.2.c:25| &   \verb|12| &   \verb|1.41741e-06| &   \verb|1.41741e-06| \\
+   \hline
+\end{longtable}
+
+\end{center}
+\newpage
+
+\begin{center}\small
+{\Large \bf Top 9 of 9 Functions}
+\bigskip
+\begin{longtable}{|l||r|r|r|}
+
+   \hline
+   \bf Function & \bf invocations[\#] $\nabla$ & \bf excl. time[sec] & \bf incl. time[sec] \\
+   \hline\hline
+  \verb|!$omp critical @1.2.c:24| &   \verb|12| &   \verb|7.01039e-05| &   \verb|7.15213e-05| \\
+  \verb|!$omp critical sblock @1.2.c:25| &   \verb|12| &   \verb|1.41741e-06| &   \verb|1.41741e-06| \\
+  \verb|!$omp ibarrier @1.2.c:22| &   \verb|12| &   \verb|0.00109911| &   \verb|0.00109911| \\
+      \hline
+  \verb|!$omp for @1.2.c:20| &   \verb|12| &   \verb|0.0128062| &   \verb|0.0139053| \\
+  \verb|!$omp ibarrier @1.2.c:26| &   \verb|12| &   \verb|5.11392e-05| &   \verb|5.11392e-05| \\
+  \verb|!$omp parallel @1.2.c:18| &   \verb|12| &   \verb|1.74319e-05| &   \verb|0.0140454| \\
+      \hline
+  \verb|time_difference| &   \verb|1| &   \verb|5.00742e-06| &   \verb|5.00742e-06| \\
+  \verb|main| &   \verb|1| &   \verb|0.00143556| &   \verb|0.00261997| \\
+  \verb|parallel region| &   \verb|1| &   \verb|8.21946e-06| &   \verb|0.0011794| \\
+   \hline
+\end{longtable}
+
+\end{center}
+\newpage
+
+\newpage
+
+
+\end{document}
